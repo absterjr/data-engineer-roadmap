@@ -9,7 +9,8 @@ env/
 .mypy_cache/
 
 # Data / secrets
-data/
+data/*
+!data/country_region.csv
 *.csv
 *.xlsx
 *.parquet
