@@ -4,6 +4,8 @@ SQL + Python, from the ground up.
 
 > **Status:** 🔨 in progress
 
+> **New here?** Read [HOW-IT-WORKS.md](HOW-IT-WORKS.md) first — it explains what the engine and the queries file are, in plain language, with a SQL-to-engine cheat sheet and a glossary.
+
 ## What this phase covers
 
 - **SQL:** joins, window functions, CTEs, query optimization
