@@ -82,3 +82,34 @@ Each entry links the commit(s) it covers, so anyone can see exactly what changed
 - Add pytest tests for the engine — a tiny engine this core deserves a safety net.
 
 ---
+
+## Entry 3 — Beginner guide: how the engine and queries work
+
+**Date:** 2026-08-27
+
+**Commit(s):** [`1318c0e`](https://github.com/absterjr/data-engineer-roadmap/commit/1318c0e) — "docs(phase-1): beginner guide - how the engine and queries work"
+
+**What I did**
+
+- Wrote `HOW-IT-WORKS.md`: a plain-language guide explaining what a table/CSV is, what the engine is (a mini SQL database in pure Python), and what `queries.py` is (five questions asked to the engine).
+- Included a step-by-step walkthrough of Q1 (revenue by country) showing the same question in SQL and as engine calls — load → compute Revenue → group by country → sort → top 10.
+- Added a SQL ↔ engine cheat sheet table (every engine function mapped to its SQL equivalent).
+- Added a glossary: CSV, row, column, aggregate, NULL, coerce, JOIN key, predicate, `lambda`.
+- Linked the guide from the top of the phase README with a "New here?" callout.
+
+**What I learned**
+
+- Documentation for beginners is a translation problem: take what I now take for granted (that `group_by` is `GROUP BY`, that a CSV is just a text table) and say it out loud. Writing the SQL↔engine table forced me to check every function signature against its SQL equivalent — a useful self-review of the engine's design.
+- A worked example (Q1 end to end) is worth more than a dozen definitions — it shows the *flow*, not just the pieces.
+
+**Questions / blockers**
+
+- Should each engine function get a mini worked example too, or is the Q1 walkthrough + cheat sheet enough for now?
+
+**Next steps**
+
+- Rebuild task: poorly-written SQL for Q1–Q3 in `sql/`, then rewrite cleanly with indexes and explain plans.
+- Window functions in the engine.
+- pytest tests for the engine.
+
+---
