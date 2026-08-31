@@ -208,3 +208,35 @@ Each entry links the commit(s) it covers, so anyone can see exactly what changed
 - Publish the LinkedIn post (link in comments), then add the repo feature to the profile.
 
 ---
+
+## Entry 7 — Window functions, LEFT JOIN, error handling: engine and SQL gaps closed
+
+**Date:** 2026-08-31
+
+**Commit(s):** [`64164d5`](https://github.com/absterjr/data-engineer-roadmap/commit/64164d5) — "feat(phase-1): day 7 - window functions, LEFT JOIN, error handling"
+
+**What I did**
+
+- **Engine window functions**: `row_number`, `rank`, `dense_rank`, `running_sum`, `partition_sum` — SQL's `OVER (PARTITION BY ... ORDER BY ...)` implemented by hand. Rows keep their position (window functions add a column, they don't collapse or reorder — that's the whole conceptual difference from GROUP BY). NULLs sort last.
+- **`join(..., how="left")`** with a hash index — O(n+m) instead of the nested loop's O(n*m), same trick real databases use. Verified: dropping UK from the region table keeps all left rows with `Region = None`.
+- **Error handling**: missing columns raise a clear `KeyError` (with the available columns listed), missing files raise `FileNotFoundError` with a "run scripts/fetch_online_retail.py" hint, bad join types raise `ValueError`.
+- **queries.py Q6–Q8**: top-3 products per country/month (`ROW_NUMBER`), cumulative monthly revenue (`running_sum`), revenue share by country (`partition_sum` with no key = grand total).
+- **sql/window_functions.sql**: the same Q6–Q8 in SQL plus a RANK vs DENSE_RANK tie demo (products 22113 and 23207 both round to $12,701 — ROW_NUMBER splits them 1,2; RANK/DENSE_RANK tie them 1,1) and the "WHERE can't use windows" trap.
+
+**What I learned**
+
+- **Cross-validation caught a real bug.** My first engine Q6 ranked individual invoice lines, not products — UK came out $441,845 vs SQL's $551,976. The engine and SQL sides were written independently; the mismatch surfaced instantly. This is why the "same numbers from two implementations" rule is worth its weight: it's a test suite in disguise.
+- **Window semantics are subtle where you least expect it.** Without an ORDER BY, `SUM() OVER (PARTITION BY k)` is the whole partition; with one, it's a running total. That one difference is a whole class of bugs in real dashboards.
+- **Hash join is a performance cliff a beginner can actually feel** — 541k rows × 38 region rows was fine with nested loops, but left joins on big tables would crawl. The index-building step is the same "sorted lookup" idea as SQLite's B-tree, one level simpler.
+
+**Questions / blockers**
+
+- None — engine and SQL now cover the full Phase 1 skill list (joins, window functions, CTEs via the workout, query optimization via EXPLAIN).
+
+**Next steps**
+
+- pytest test suite for the engine (the journal's oldest open item).
+- Phase 1 wrap-up: mark statuses complete, publish the LinkedIn post.
+- Optional: purge the 64.5MB DB blob from git history with filter-repo.
+
+---
