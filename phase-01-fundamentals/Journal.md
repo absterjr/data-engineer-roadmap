@@ -113,3 +113,38 @@ Each entry links the commit(s) it covers, so anyone can see exactly what changed
 - pytest tests for the engine.
 
 ---
+
+## Entry 4 — Rebuild task: bad SQL vs fixed SQL, explained
+
+**Date:** 2026-08-28
+
+**Commit(s):** [`33db0bf`](https://github.com/absterjr/data-engineer-roadmap/commit/33db0bf) — "feat(phase-1): day 4 - rebuild task: bad vs fixed SQL with detailed explanations" · [`479f244`](https://github.com/absterjr/data-engineer-roadmap/commit/479f244) — "fix(gitignore): untrack sqlite db, properly track country_region.csv"
+
+**What I did**
+
+- Rebuild task complete: `sql/bad_queries.sql` (Q1–Q3 + a bonus query that errors) and `sql/good_queries.sql` (the fixes + the index).
+- `sql/README.md` — the detailed write-up: SQL's order of operations (FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT), every problem explained with **real** `EXPLAIN QUERY PLAN` output, and alternative correct ways to write each query (HAVING, CTEs, window functions, `strftime`, partial-month handling).
+- `scripts/setup_sqlite.py` loads the CSV into SQLite (541,909 rows, no indexes on purpose) and `scripts/run_sql.py` runs a `.sql` file without needing the sqlite3 CLI.
+- Cross-checked: the SQL answers match the engine's answers (Q1, Q3 identical numbers) — two independent implementations agreeing is a free test.
+
+**What I learned**
+
+- **The order of operations is the whole game.** Every "bad" query violated it: `WHERE SUM(...)` (aggregates don't exist before grouping), `DISTINCT` after `GROUP BY` (redundant second pass — visible in the plan as `USE TEMP B-TREE FOR DISTINCT`).
+- **Non-sargable predicates beat indexes.** `LIKE '%2011%'` and `substr(InvoiceDate,1,4)='2011'` both still `SCAN online_retail` *after* I created the index; only the range predicate (`>= '2011-01-01' AND < '2012-01-01'`) became `SEARCH ... USING INDEX`. Proven with plans, not vibes.
+- **SQLite hides bugs by being helpful.** A bare column in `SELECT` that's not in `GROUP BY` runs in SQLite (arbitrary value) but errors in PostgreSQL. Real proof in the data: 85123A has four descriptions (`?`, CREAM, WHITE, "wrongly marked carton 22804") — the bad query lumps $97,894 under the first label and hides $178.51 of real sales.
+- **Ordinals are fragile promises** (`ORDER BY 2`, `GROUP BY 1`) — silently wrong the day a column moves. Name columns.
+- **Partial months are an analytics trap, not a SQL error.** `2011-12 | 433k` looks like a crash; the data just ends Dec 9. Queries can be perfect and the answer still wrong.
+- **`.gitignore` mistakes are silent until a 64MB file lands.** My `data/*` edit anchored the pattern to the repo root, un-ignoring `phase-01-fundamentals/data/` entirely — the 64.5MB SQLite DB got committed (GitHub warned) and, worse, `country_region.csv` had silently never been tracked (Q4 would crash for anyone cloning). Fix: `**/data/*` + `!**/data/country_region.csv` + `git rm --cached`. A pattern with a slash in the middle is anchored to the .gitignore's directory — that nuance cost a full commit.
+
+**Questions / blockers**
+
+- The 64.5MB DB blob now lives in git history forever (a fresh clone is ~64MB heavier). Rewrite history (filter-repo) to purge it, or accept it for a small learning repo?
+- Does the engine need `LEFT JOIN` next, or should the SQL side learn `LEFT JOIN` first?
+
+**Next steps**
+
+- Window functions: implement `ROW_NUMBER()` / running totals in the engine (Phase 1 skill list).
+- pytest tests for the engine.
+- LinkedIn post draft for Phase 1 (ship publicly).
+
+---
