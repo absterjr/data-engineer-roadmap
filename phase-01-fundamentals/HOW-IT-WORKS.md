@@ -30,12 +30,15 @@ A **CSV file** is the same grid written as plain text — one row per line, colu
 - `project` → SQL's `SELECT` (pick which columns to keep)
 - `where` → SQL's `WHERE` (keep only rows that match a condition)
 - `extend` → SQL's `SELECT ... AS` (compute a new column)
-- `join` → SQL's `JOIN` (glue two tables together)
+- `join` → SQL's `JOIN` (glue two tables together; supports INNER and LEFT)
 - `group_by` → SQL's `GROUP BY` (bucket rows and summarize each bucket)
 - `order_by` → SQL's `ORDER BY` (sort)
 - `limit` → SQL's `LIMIT` (keep only the first N rows)
+- `row_number` / `rank` / `dense_rank` → SQL's `ROW_NUMBER()` / `RANK()` / `DENSE_RANK() OVER (...)`
+- `running_sum` → SQL's `SUM(col) OVER (ORDER BY ...)` (running total)
+- `partition_sum` → SQL's `SUM(col) OVER (PARTITION BY ...)` (group total on every row)
 
-If you can learn these 8 functions, you have already learned how SQL works under the hood — that's the whole point of this phase.
+If you can learn these functions, you have already learned how SQL works under the hood — that's the whole point of this phase.
 
 ---
 
@@ -52,6 +55,9 @@ Each function in the file is one question:
 | `q3_monthly_revenue` | Does revenue change month to month? |
 | `q4_revenue_by_region` | What if we group countries into regions? (uses JOIN) |
 | `q5_data_quality` | How messy is the data? (missing values, returns, cancellations) |
+| `q6_top_products_per_country` | Top 3 products in each country, each month? (uses ROW_NUMBER) |
+| `q7_running_monthly_revenue` | What does revenue look like accumulated? (uses RUNNING SUM) |
+| `q8_revenue_share` | What share of all revenue does each country own? (uses PARTITION SUM) |
 
 You run it with (from inside the `phase-01-fundamentals/` folder):
 
@@ -116,6 +122,10 @@ The result is the table you see printed — 10 countries with their total revenu
 | `ORDER BY k DESC` | `order_by(table, "k", desc=True)` |
 | `LIMIT 10` | `limit(table, 10)` |
 | `INNER JOIN ... ON a.k = b.k` | `join(a, b, "k", "k")` |
+| `LEFT JOIN ... ON a.k = b.k` | `join(a, b, "k", "k", how="left")` |
+| `ROW_NUMBER() OVER (PARTITION BY k ORDER BY v)` | `row_number(t, ["k"], "v", name="rn")` |
+| `SUM(v) OVER (PARTITION BY k ORDER BY o)` | `running_sum(t, "v", ["k"], "o")` |
+| `SUM(v) OVER (PARTITION BY k)` | `partition_sum(t, "v", ["k"])` |
 
 ---
 

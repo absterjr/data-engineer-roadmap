@@ -304,6 +304,44 @@ And indexes are not free. Every `INSERT`/`UPDATE`/`DELETE` must also maintain th
 
 ---
 
+## Window functions: what GROUP BY cannot do
+
+`GROUP BY` collapses rows — one output row per group. **Window functions** keep every row and compute something across a *window* of related rows: a rank inside each partition, a running total, a share of a total. They're the last big Phase 1 SQL skill, and they're in `sql/window_functions.sql`:
+
+```bash
+python scripts/run_sql.py sql/window_functions.sql
+```
+
+The syntax is `FUNCTION() OVER (PARTITION BY k ORDER BY o)` — *over a window defined by* partition and order. Three facts make window functions click:
+
+1. **PARTITION BY splits the rows into groups** (like GROUP BY), but does NOT collapse them — every row survives, and each partition is numbered/ranked/summed independently.
+2. **ORDER BY inside the OVER decides what "so far" means** — for a running total, it's "all rows up to this one, in this order".
+3. **The window is computed after GROUP BY but before ORDER BY**, and the result can't be used in `WHERE` — that's why "top N per group" needs a nested query:
+
+```sql
+-- top 3 products per (country, month): rank inside the window, filter outside
+WITH ranked AS (
+    SELECT ..., ROW_NUMBER() OVER (PARTITION BY Country, Month
+                                   ORDER BY Revenue DESC) AS rn
+    FROM product_month
+)
+SELECT ... FROM ranked WHERE rn <= 3;
+```
+
+The three queries in the file mirror the engine's Q6–Q8, and the numbers cross-check:
+
+| Question | Engine (`src/queries.py`) | SQL (`sql/window_functions.sql`) |
+|----------|---------------------------|----------------------------------|
+| Top-3 product revenue, per country-month | Q6 — UK `551,976.78` | Q6 — UK `551,976.78` ✓ |
+| Cumulative monthly revenue | Q7 — final `9,747,747.93` | Q7 — final `9,747,747.93` ✓ |
+| Share of revenue by country | Q8 — UK `84.0%` | Q8 — UK `84.0%` ✓ |
+
+The bonus query shows **RANK vs DENSE_RANK vs ROW_NUMBER** at a real tie: products `23207` and `22113` both round to $12,701 — `ROW_NUMBER` still splits them (`1, 2`), while `RANK` and `DENSE_RANK` tie them (`1, 1`). The difference appears only when values tie: RANK leaves gaps (1,2,2,4), DENSE_RANK doesn't (1,2,2,3).
+
+One trap worth the price of admission: `WHERE rn <= 3` fails — window functions don't exist when `WHERE` runs. Nest the window query and filter in the outer query.
+
+---
+
 ## Cheat sheet: bad habit → fix
 
 | Bad habit | Why it's bad | The fix |

@@ -56,19 +56,24 @@ If you'd rather try another dataset: [NYC Taxi trip data](https://www.nyc.gov/si
 
 ## Query workouts (Day 2)
 
-`src/queries.py` answers five analytical questions using **only engine operations** (WHERE, GROUP BY, JOIN, ORDER BY, LIMIT, aggregates) — no SQL libraries. Run it from inside this folder:
+`src/queries.py` answers eight analytical questions using **only engine operations** — no SQL libraries. Run it from inside this folder:
 
 ```bash
 python src/queries.py
 ```
 
-1. **Total revenue by country** — UK leads at $8.19M (82% of all revenue); Netherlands, Ireland (EIRE), Germany follow.
+1. **Total revenue by country** — UK leads at $8.19M (84% of all revenue); Netherlands, Ireland (EIRE), Germany follow.
 2. **Top products by revenue** — `DOTCOM POSTAGE` (postage charges!) tops the list at $206k.
 3. **Monthly revenue** — clear seasonality: peaks in Nov 2011 ($1.46M), dips Jan–Feb.
 4. **Revenue by region** — JOIN against `data/country_region.csv` (38 countries → 8 regions).
 5. **Data quality** — 135,080 rows (25%) have no `CustomerID`, 10,624 have negative `Quantity` (returns), 9,288 are on cancelled invoices (`C...`).
+6. **Top 3 products per country, per month** — `ROW_NUMBER` over a `(Country, Month)` partition.
+7. **Cumulative monthly revenue** — running total over months: $9.75M by Dec 2011.
+8. **Revenue share by country** — `PARTITION SUM` without a key = grand total; UK holds 84%.
 
-The engine supports: `read_csv` (with type coercion), `project` (SELECT), `where` (WHERE), `extend` (computed columns), `join` (INNER JOIN), `group_by` + aggregates (`count`, `sum_`, `mean`, `min_`, `max_`), `order_by`, `limit`.
+The engine supports: `read_csv` (with type coercion + clear errors), `project` (SELECT), `where` (WHERE), `extend` (computed columns), `join` (INNER + LEFT, hash-based), `group_by` + aggregates (`count`, `sum_`, `mean`, `min_`, `max_`), `order_by`, `limit`, and window functions (`row_number`, `rank`, `dense_rank`, `running_sum`, `partition_sum`).
+
+The same questions are answered in SQL — see [sql/README.md](sql/README.md) and [sql/window_functions.sql](sql/window_functions.sql). Engine and SQL agree on every number; that cross-check is the point.
 
 ## Rebuild task
 

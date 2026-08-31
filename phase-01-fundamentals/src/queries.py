@@ -1,9 +1,10 @@
-"""Day 2 — analytical questions answered with the engine.
+"""Analytical questions answered with the engine.
 
 Run:  python src/queries.py
 
 Every question is answered using only engine operations
-(WHERE, GROUP BY, JOIN, ORDER BY, LIMIT, aggregates) — no SQL libraries.
+(WHERE, GROUP BY, JOIN, ORDER BY, LIMIT, aggregates, window functions)
+— no SQL libraries.
 """
 from __future__ import annotations
 
@@ -13,6 +14,7 @@ from pathlib import Path
 from engine import (
     Table,
     read_csv,
+    project,
     where,
     extend,
     join,
@@ -21,6 +23,9 @@ from engine import (
     limit,
     count,
     sum_,
+    row_number,
+    running_sum,
+    partition_sum,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -106,6 +111,55 @@ def q5_data_quality(sales: Table) -> None:
     print()
 
 
+def q6_top_products_per_country(sales: Table) -> None:
+    """ROW_NUMBER: top 3 products by revenue within each country, per month."""
+    monthly = extend(
+        sales,
+        lambda r: datetime.strptime(r["InvoiceDate"], "%Y-%m-%d %H:%M:%S").strftime("%Y-%m"),
+        "Month",
+    )
+    by_product = group_by(
+        monthly,
+        ["Country", "Month", "StockCode"],
+        {"Revenue": sum_("Revenue")},
+    )
+    ranked = row_number(
+        by_product,
+        partition_keys=["Country", "Month"],
+        order_key="Revenue",
+        desc=True,
+        name="rn",
+    )
+    top3 = where(ranked, lambda r: r["rn"] <= 3)
+    top3 = group_by(top3, ["Country"], {"Top3": sum_("Revenue")})
+    show(order_by(top3, "Top3", desc=True), "Q6. Top-3 product revenue per country, month (ROW_NUMBER)")
+
+
+def q7_running_monthly_revenue(sales: Table) -> None:
+    """RUNNING SUM: cumulative revenue month over month."""
+    monthly = extend(
+        sales,
+        lambda r: datetime.strptime(r["InvoiceDate"], "%Y-%m-%d %H:%M:%S").strftime("%Y-%m"),
+        "Month",
+    )
+    by_month = group_by(monthly, ["Month"], {"Revenue": sum_("Revenue")})
+    with_total = running_sum(by_month, "Revenue", order_key="Month", name="RunningTotal")
+    show(with_total, "Q7. Cumulative revenue month over month (RUNNING SUM)")
+
+
+def q8_revenue_share(sales: Table) -> None:
+    """PARTITION SUM (no partition = grand total): each country's share."""
+    by_country = group_by(sales, ["Country"], {"Revenue": sum_("Revenue")})
+    with_total = partition_sum(by_country, "Revenue", name="GrandTotal")
+    with_share = extend(
+        with_total,
+        lambda r: round(100 * r["Revenue"] / r["GrandTotal"], 2) if r["GrandTotal"] else 0,
+        "Share%",
+    )
+    share = project(with_share, ["Country", "Share%"])
+    show(order_by(share, "Share%", desc=True), "Q8. Share of total revenue by country (PARTITION SUM)")
+
+
 if __name__ == "__main__":
     sales = load_sales()
     print(f"Loaded {sales.name}: {len(sales):,} rows x {sales.width} cols\n")
@@ -115,3 +169,6 @@ if __name__ == "__main__":
     q3_monthly_revenue(sales)
     q4_revenue_by_region(sales)
     q5_data_quality(sales)
+    q6_top_products_per_country(sales)
+    q7_running_monthly_revenue(sales)
+    q8_revenue_share(sales)

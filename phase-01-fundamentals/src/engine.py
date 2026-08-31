@@ -1,13 +1,20 @@
 """A tiny relational engine built from first principles.
 
-Reads a CSV and supports SELECT, WHERE, JOIN, GROUP BY, ORDER BY, LIMIT
-and basic aggregation — implemented by hand, with NO SQL libraries.
+Reads a CSV and supports SELECT, WHERE, JOIN, GROUP BY, ORDER BY, LIMIT,
+window functions and basic aggregation — implemented by hand, with NO
+SQL libraries.
 
 Day 2 additions:
 - `read_csv` now coerces strings to int/float/None where possible
 - `extend` adds computed columns (SELECT expr AS name)
 - `order_by` / `limit` for sorting and top-N
 - aggregate functions (count, sum_, mean, min_, max_) for GROUP BY
+
+Day 6 additions:
+- window functions: `row_number`, `rank`, `dense_rank`, `running_sum`,
+  `partition_sum` (SQL's ROW_NUMBER / RANK / SUM() OVER (PARTITION BY ...))
+- `join` supports LEFT JOIN and uses a hash index (O(n+m) not O(n*m))
+- clear errors for missing columns and missing files
 
 These are the building blocks you'd otherwise take for granted in SQL.
 """
@@ -42,6 +49,16 @@ class Table:
         return f"Table({self.name!r}, cols={self.columns}, rows={len(self.rows)})"
 
 
+def _require_columns(table: Table, columns, op: str) -> None:
+    """Raise a clear error if any column is missing from the table."""
+    missing = [c for c in columns if c not in table.columns]
+    if missing:
+        raise KeyError(
+            f"{op}: column(s) {missing} not found in {table.name!r} "
+            f"(available: {table.columns})"
+        )
+
+
 # ---------------------------------------------------------------------------
 # Loading
 # ---------------------------------------------------------------------------
@@ -71,6 +88,11 @@ def _coerce(value: str):
 def read_csv(path: str | Path, name: str | None = None, coerce: bool = True) -> Table:
     """Read a CSV file into a Table. Assume the first row is a header."""
     path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(
+            f"read_csv: {path} does not exist. If this is the Online Retail "
+            "dataset, get it with: python scripts/fetch_online_retail.py"
+        )
     with path.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         columns = list(reader.fieldnames or [])
@@ -88,6 +110,7 @@ def read_csv(path: str | Path, name: str | None = None, coerce: bool = True) -> 
 
 def project(table: Table, columns: list[str]) -> Table:
     """SELECT: keep only the given columns (in that order)."""
+    _require_columns(table, columns, "project")
     return Table(
         name=table.name,
         columns=columns,
@@ -114,21 +137,45 @@ def extend(table: Table, expr: Callable[[dict], object], name: str) -> Table:
     return Table(name=table.name, columns=table.columns + [name], rows=rows)
 
 
-def join(left: Table, right: Table, on_left: str, on_right: str) -> Table:
-    """INNER JOIN on left[on_left] == right[on_right].
+def join(
+    left: Table,
+    right: Table,
+    on_left: str,
+    on_right: str,
+    how: str = "inner",
+) -> Table:
+    """JOIN on left[on_left] == right[on_right].
 
+    `how` is "inner" (default) or "left". A LEFT JOIN keeps every left
+    row; right-side columns get None when no match exists.
+
+    Uses a hash index on the right table, so it runs in O(n + m) instead
+    of the nested loop's O(n * m) — the same trick real databases use.
     Right-side columns that already exist on the left are dropped: the
     join key is shared, so the values are equal by construction.
     """
+    if how not in ("inner", "left"):
+        raise ValueError(f"join: how must be 'inner' or 'left', got {how!r}")
+    _require_columns(left, [on_left], "join")
+    _require_columns(right, [on_right], "join")
+
     new_cols = [c for c in right.columns if c not in left.columns]
     columns = left.columns + new_cols
+
+    index: dict[object, list[dict]] = {}
+    for rrow in right.rows:
+        index.setdefault(rrow[on_right], []).append(rrow)
+
     rows = []
     for lrow in left.rows:
-        for rrow in right.rows:
-            if lrow[on_left] == rrow[on_right]:
+        matches = index.get(lrow[on_left], [])
+        if matches:
+            for rrow in matches:
                 merged = {k: v for k, v in rrow.items() if k in new_cols}
                 rows.append({**lrow, **merged})
-    return Table(name=f"({left.name} ⋈ {right.name})", columns=columns, rows=rows)
+        elif how == "left":
+            rows.append({**lrow, **{c: None for c in new_cols}})
+    return Table(name=f"({left.name} {how}⋈ {right.name})", columns=columns, rows=rows)
 
 
 def group_by(table: Table, keys: list[str], aggs) -> Table:
@@ -138,6 +185,7 @@ def group_by(table: Table, keys: list[str], aggs) -> Table:
       - a callable (group_rows, key_values) -> dict of extra columns, or
       - a dict of output_name -> fn(group_rows, key_values) -> value.
     """
+    _require_columns(table, keys, "group_by")
     buckets: dict[tuple, list[dict]] = {}
     for row in table.rows:
         key = tuple(row[k] for k in keys)
@@ -161,8 +209,12 @@ def group_by(table: Table, keys: list[str], aggs) -> Table:
 
 
 def order_by(table: Table, key: str, desc: bool = False) -> Table:
-    """ORDER BY key [DESC]. Stable sort: ties keep their input order."""
-    rows = sorted(table.rows, key=lambda r: r[key], reverse=desc)
+    """ORDER BY key [DESC]. Stable sort: ties keep their input order.
+
+    NULLs sort last, whether ascending or descending.
+    """
+    _require_columns(table, [key], "order_by")
+    rows = sorted(table.rows, key=lambda r: (r[key] is None, r[key]), reverse=desc)
     return Table(name=table.name, columns=table.columns, rows=rows)
 
 
@@ -218,6 +270,156 @@ def max_(col: str) -> Callable[[list[dict], tuple], object]:
         return max(vals) if vals else None
 
     return agg
+
+
+# ---------------------------------------------------------------------------
+# Window functions (SQL's OVER (PARTITION BY ... ORDER BY ...))
+#
+# Unlike GROUP BY, window functions do NOT collapse rows: every input row
+# keeps its place, and a new column is added with the window's answer.
+# Row order is preserved, exactly like SQL.
+# ---------------------------------------------------------------------------
+
+
+def _partition(table: Table, partition_keys: list[str]) -> dict[tuple, list[tuple[int, dict]]]:
+    """Bucket (index, row) pairs by partition key. Empty key = one bucket."""
+    _require_columns(table, partition_keys, "window function")
+    buckets: dict[tuple, list[tuple[int, dict]]] = {}
+    for i, row in enumerate(table.rows):
+        key = tuple(row[k] for k in partition_keys) if partition_keys else ()
+        buckets.setdefault(key, []).append((i, row))
+    return buckets
+
+
+def _order_partition(group, order_key: str | None, desc: bool) -> list[tuple[int, dict]]:
+    """Order a partition's (index, row) pairs by order_key. NULLs last."""
+    if order_key is None:
+        return group
+    return sorted(group, key=lambda ir: (ir[1][order_key] is None, ir[1][order_key]), reverse=desc)
+
+
+def _window(table: Table, partition_keys, order_key, desc, name: str) -> list[dict]:
+    """Shared plumbing: allocate the new column, preserving row order."""
+    rows: list[dict | None] = [None] * len(table.rows)
+    for group in _partition(table, partition_keys).values():
+        ordered = _order_partition(group, order_key, desc)
+        for i, row in ordered:
+            r = dict(row)
+            r[name] = None  # placeholder, filled by the caller
+            rows[i] = r
+    return rows
+
+
+def row_number(
+    table: Table,
+    partition_keys: list[str] | None = None,
+    order_key: str | None = None,
+    desc: bool = False,
+    name: str = "row_num",
+) -> Table:
+    """ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ...) — 1, 2, 3..."""
+    partition_keys = partition_keys or []
+    _require_columns(table, [c for c in partition_keys + [order_key] if c], "row_number")
+    result = _window(table, partition_keys, order_key, desc, name)
+    for group in _partition(table, partition_keys).values():
+        for n, (i, _) in enumerate(_order_partition(group, order_key, desc), start=1):
+            result[i][name] = n
+    return Table(name=table.name, columns=table.columns + [name], rows=result)
+
+
+def rank(
+    table: Table,
+    partition_keys: list[str] | None = None,
+    order_key: str | None = None,
+    desc: bool = False,
+    name: str = "rank",
+) -> Table:
+    """RANK() OVER (...): ties share a rank, then the next rank skips.
+
+    Equal values get the same rank; the following rank is (position + 1),
+    leaving gaps — exactly like SQL's RANK().
+    """
+    partition_keys = partition_keys or []
+    _require_columns(table, [c for c in partition_keys + [order_key] if c], "rank")
+    result = _window(table, partition_keys, order_key, desc, name)
+    _sentinel = object()
+    for group in _partition(table, partition_keys).values():
+        prev, current = _sentinel, 0
+        for pos, (i, row) in enumerate(_order_partition(group, order_key, desc), start=1):
+            val = row[order_key]
+            if prev is _sentinel or val != prev:
+                current = pos
+                prev = val
+            result[i][name] = current
+    return Table(name=table.name, columns=table.columns + [name], rows=result)
+
+
+def dense_rank(
+    table: Table,
+    partition_keys: list[str] | None = None,
+    order_key: str | None = None,
+    desc: bool = False,
+    name: str = "dense_rank",
+) -> Table:
+    """DENSE_RANK() OVER (...): ties share a rank, no gaps."""
+    partition_keys = partition_keys or []
+    _require_columns(table, [c for c in partition_keys + [order_key] if c], "dense_rank")
+    result = _window(table, partition_keys, order_key, desc, name)
+    _sentinel = object()
+    for group in _partition(table, partition_keys).values():
+        prev, current = _sentinel, 0
+        for i, row in _order_partition(group, order_key, desc):
+            val = row[order_key]
+            if prev is _sentinel or val != prev:
+                current += 1
+                prev = val
+            result[i][name] = current
+    return Table(name=table.name, columns=table.columns + [name], rows=result)
+
+
+def running_sum(
+    table: Table,
+    col: str,
+    partition_keys: list[str] | None = None,
+    order_key: str | None = None,
+    desc: bool = False,
+    name: str = "running_total",
+) -> Table:
+    """SUM(col) OVER (PARTITION BY ... ORDER BY ...) — running total.
+
+    NULLs in col are treated as 0 (like SQL's default frame, which
+    counts only rows seen so far).
+    """
+    partition_keys = partition_keys or []
+    _require_columns(table, [col] + [c for c in partition_keys + [order_key] if c], "running_sum")
+    result = _window(table, partition_keys, order_key, desc, name)
+    for group in _partition(table, partition_keys).values():
+        acc = 0.0
+        for i, row in _order_partition(group, order_key, desc):
+            acc += row[col] or 0
+            result[i][name] = acc
+    return Table(name=table.name, columns=table.columns + [name], rows=result)
+
+
+def partition_sum(
+    table: Table,
+    col: str,
+    partition_keys: list[str] | None = None,
+    name: str = "partition_total",
+) -> Table:
+    """SUM(col) OVER (PARTITION BY ...) — the whole partition's total,
+    repeated on every row. (Window without ORDER BY: frame = whole partition.)"""
+    partition_keys = partition_keys or []
+    _require_columns(table, [col] + partition_keys, "partition_sum")
+    totals: dict[tuple, float] = {}
+    for row in table.rows:
+        key = tuple(row[k] for k in partition_keys) if partition_keys else ()
+        totals[key] = totals.get(key, 0.0) + (row[col] or 0)
+    result = _window(table, partition_keys, None, False, name)
+    for row in result:
+        key = tuple(row[k] for k in partition_keys) if partition_keys else ()
+        row[name] = totals[key]
+    return Table(name=table.name, columns=table.columns + [name], rows=result)
 
 
 # ---------------------------------------------------------------------------
