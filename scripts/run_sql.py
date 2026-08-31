@@ -22,6 +22,10 @@ def main() -> None:
         return
 
     sql_path = Path(sys.argv[1])
+    if not sql_path.exists():  # allow running from anywhere: fall back to phase dir
+        fallback = ROOT / "phase-01-fundamentals" / sql_path
+        if fallback.exists():
+            sql_path = fallback
     script = "\n".join(
         line for line in sql_path.read_text(encoding="utf-8").splitlines()
         if not line.strip().startswith("--")

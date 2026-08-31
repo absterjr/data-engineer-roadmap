@@ -2,9 +2,28 @@
 
 SQL + Python, from the ground up.
 
-> **Status:** 🔨 in progress
+> **Status:** 🔨 in progress — engine + queries + rebuild task complete; window functions and tests next.
 
 > **New here?** Read [HOW-IT-WORKS.md](HOW-IT-WORKS.md) first — it explains what the engine and the queries file are, in plain language, with a SQL-to-engine cheat sheet and a glossary.
+
+> **Follow along:** [Journal.md](Journal.md) logs each day's work, and every entry links the commit(s) it covers.
+
+## What's in this folder
+
+```
+phase-01-fundamentals/
+├── README.md          # you are here
+├── HOW-IT-WORKS.md    # beginner's guide to the engine and queries
+├── Journal.md         # day-by-day log with commit links
+├── src/engine.py      # the mini relational engine (pure Python, no SQL libs)
+├── src/queries.py     # five analytical questions answered with the engine
+├── sql/bad_queries.sql    # rebuild task: the poorly-written versions
+├── sql/good_queries.sql   # rebuild task: the fixed, indexed versions
+├── sql/README.md          # rebuild task: detailed explanations + alternatives
+└── data/              # gitignored: online_retail.csv, online_retail.db
+                       # (regenerate with scripts/fetch_online_retail.py and
+                       #  scripts/setup_sqlite.py); country_region.csv is tracked
+```
 
 ## What this phase covers
 
@@ -21,13 +40,13 @@ Build a tiny relational engine in pure Python that reads CSVs and implements `SE
 
 `InvoiceNo`, `StockCode`, `Description`, `Quantity`, `InvoiceDate`, `UnitPrice`, `CustomerID`, `Country`
 
-The dataset is **not committed** to the repo (it's large). Get it with:
+The dataset is **not committed** to the repo (it's large). Get it with — from the repo root:
 
 ```bash
 python scripts/fetch_online_retail.py   # downloads xlsx + converts to data/online_retail.csv
 ```
 
-Run the engine against it:
+Run the engine against it — from inside this folder (`phase-01-fundamentals/`):
 
 ```bash
 python src/engine.py data/online_retail.csv
@@ -37,7 +56,7 @@ If you'd rather try another dataset: [NYC Taxi trip data](https://www.nyc.gov/si
 
 ## Query workouts (Day 2)
 
-`src/queries.py` answers five analytical questions using **only engine operations** (WHERE, GROUP BY, JOIN, ORDER BY, LIMIT, aggregates) — no SQL libraries:
+`src/queries.py` answers five analytical questions using **only engine operations** (WHERE, GROUP BY, JOIN, ORDER BY, LIMIT, aggregates) — no SQL libraries. Run it from inside this folder:
 
 ```bash
 python src/queries.py
@@ -55,7 +74,7 @@ The engine supports: `read_csv` (with type coercion), `project` (SELECT), `where
 
 Fix a set of poorly-optimized SQL queries, then rewrite them as clean, indexed, explainable queries.
 
-Done — see [sql/README.md](sql/README.md) for the full breakdown: bad queries, fixed queries, what was wrong in each, real `EXPLAIN QUERY PLAN` output before/after indexing, and the alternative ways each query could be written.
+Done — see [sql/README.md](sql/README.md) for the full breakdown: bad queries, fixed queries, what was wrong in each, real `EXPLAIN QUERY PLAN` output before/after indexing, and the alternative ways each query could be written. Runs from anywhere in the repo:
 
 ```bash
 python scripts/setup_sqlite.py                # CSV -> SQLite (once)

@@ -55,7 +55,7 @@ To counter "AI rot" — the trap of letting tools do the thinking while your fun
 
 | # | Phase | Focus | Deliverable project | Status |
 |---|-------|-------|----------------------|--------|
-| 1 | Fundamentals | SQL + Python, from the ground up | Rebuild a mini relational engine (filter / join / group-by) in pure Python | 🔨 in progress |
+| 1 | Fundamentals | SQL + Python, from the ground up | Rebuild a mini relational engine (filter / join / group-by) in pure Python | 🔨 [in progress](phase-01-fundamentals/) |
 | 2 | EDA | Exploratory data analysis, statistics, visualization | Full EDA study on a real public dataset with a written report | — |
 | 3 | Databases & data modeling | Schema design, normalization, dimensional modeling | Design + build a warehouse for a fictional e-commerce company | — |
 | 4 | Pipelines | ETL / ELT, orchestration, idempotency, monitoring | End-to-end ELT pipeline: API → land → transform → warehouse | — |
@@ -81,6 +81,14 @@ To counter "AI rot" — the trap of letting tools do the thinking while your fun
 **Resources:** [SQLBolt](https://sqlbolt.com) — interactive SQL exercises · [Real Python](https://realpython.com/python-basics/) — Python fundamentals
 
 **LinkedIn post:** Why learning SQL by building it beats memorizing syntax — and how it defends against AI rot.
+
+**What's built so far** (in [`phase-01-fundamentals/`](phase-01-fundamentals/)):
+
+- `src/engine.py` — a mini relational engine in pure Python: `read_csv` (with type coercion), `project`, `where`, `extend`, `join`, `group_by` + aggregates, `order_by`, `limit`. No SQL libraries.
+- `src/queries.py` — five analytical questions answered with engine ops only (revenue by country, top products, monthly trend, region JOIN, data quality).
+- `sql/` — the rebuild task: [bad vs fixed SQL](phase-01-fundamentals/sql/README.md) for Q1–Q3 with `EXPLAIN QUERY PLAN` proof and alternatives, plus a SQL↔engine cheat sheet.
+- `HOW-IT-WORKS.md` — beginner's guide to the engine, queries, and glossary.
+- `Journal.md` — day-by-day log; every entry links the commit(s) it covers.
 
 ### Phase 2 — EDA
 
@@ -172,9 +180,10 @@ To counter "AI rot" — the trap of letting tools do the thinking while your fun
 
 1. **Clone or fork** this repo.
 2. Work through phases **in order** — each one builds on the last.
-3. For each phase, create a project folder in that phase's directory (see [Project layout](#project-layout)).
-4. Finish each phase with a **public post** — sharing forces understanding.
-5. Pace: **1–2 hrs weekdays, more on weekends**. Expect ~4–6 weeks per phase.
+3. For each phase, work inside that phase's folder (see [Project layout](#project-layout)).
+4. Each phase ships with a `Journal.md` — a day-by-day log where every entry links the commit(s) it covers, so you can see exactly what changed and when. Keep your own.
+5. Finish each phase with a **public post** — sharing forces understanding.
+6. Pace: **1–2 hrs weekdays, more on weekends**. Expect ~4–6 weeks per phase.
 
 ## Project layout
 
@@ -183,11 +192,17 @@ As each phase is completed, its project is added to the repo. The pattern for ea
 ```
 phase-01-fundamentals/
 ├── README.md          # write-up: what, why, what I learned
-├── notebooks/         # exploration (Jupyter)
+├── HOW-IT-WORKS.md    # beginner's guide: how the code works, in plain language
+├── Journal.md         # day-by-day log; each entry links its commit(s)
 ├── src/               # your rebuilt implementation
-├── data/              # (gitignored unless small/sample)
-└── sql/               # for SQL-heavy phases
+├── sql/               # SQL-heavy work (rebuild task, queries)
+├── data/              # gitignored (regenerable); small lookups may be tracked
+└── scripts/           # repo-wide helpers live at the top level instead
 ```
+
+## How this repo is maintained
+
+The roadmap is built **project-by-project, in public** — code first, then a journal entry that links the commit, so the history doubles as a tutorial. Contributions follow the same pattern: a PR that ships code or docs should update the phase `Journal.md` too.
 
 ---
 

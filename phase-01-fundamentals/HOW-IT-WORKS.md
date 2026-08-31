@@ -18,6 +18,8 @@ A **CSV file** is the same grid written as plain text — one row per line, colu
 
 `data/online_retail.csv` is one big table: **541,909 rows** (transactions) × **8 columns** (invoice number, product, quantity, price, date, customer, country…).
 
+> The file is not in the repo (it's large). Get it once with `python scripts/fetch_online_retail.py` from the repo root — see [README.md](README.md).
+
 ---
 
 ## 2. What the engine is
@@ -51,7 +53,7 @@ Each function in the file is one question:
 | `q4_revenue_by_region` | What if we group countries into regions? (uses JOIN) |
 | `q5_data_quality` | How messy is the data? (missing values, returns, cancellations) |
 
-You run it with:
+You run it with (from inside the `phase-01-fundamentals/` folder):
 
 ```bash
 python src/queries.py

@@ -13,6 +13,8 @@ python scripts/run_sql.py sql/bad_queries.sql
 python scripts/run_sql.py sql/good_queries.sql
 ```
 
+These work from the repo root or from `phase-01-fundamentals/` — the scripts find their paths either way.
+
 > The engine (`src/engine.py`) and these SQL queries answer the same questions and get the **same numbers**. Running both is a free cross-check: when two independent implementations agree, you can trust the answer.
 
 ---
