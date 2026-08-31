@@ -55,6 +55,14 @@ The engine supports: `read_csv` (with type coercion), `project` (SELECT), `where
 
 Fix a set of poorly-optimized SQL queries, then rewrite them as clean, indexed, explainable queries.
 
+Done — see [sql/README.md](sql/README.md) for the full breakdown: bad queries, fixed queries, what was wrong in each, real `EXPLAIN QUERY PLAN` output before/after indexing, and the alternative ways each query could be written.
+
+```bash
+python scripts/setup_sqlite.py                # CSV -> SQLite (once)
+python scripts/run_sql.py sql/bad_queries.sql # find the problems
+python scripts/run_sql.py sql/good_queries.sql # then read why they were fixed
+```
+
 ## Resources
 
 - [SQLBolt](https://sqlbolt.com) — interactive SQL exercises
