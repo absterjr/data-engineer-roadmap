@@ -185,11 +185,11 @@ Each entry links the commit(s) it covers, so anyone can see exactly what changed
 
 **Date:** 2026-08-30
 
-**Commit(s):** [`087a7b0`](https://github.com/absterjr/data-engineer-roadmap/commit/087a7b0) — "docs(phase-1): linkedin post draft for phase 1 launch"
+**Commit(s):** (no commit — the post draft was shared directly with the author for publishing on LinkedIn, not stored in the repo)
 
 **What I did**
 
-- Drafted the Phase 1 launch post: `linkedin-post.md` — the "AI rot" angle (rebuild SQL to understand it, not to write it faster), five concrete lessons from the build (order of operations, accidental GROUP BY order, defeating indexes, messy data, WHERE vs HAVING), repo link, and a publish checklist.
+- Drafted the Phase 1 launch post: the "AI rot" angle (rebuild SQL to understand it, not to write it faster), five concrete lessons from the build (order of operations, accidental GROUP BY order, defeating indexes, messy data, WHERE vs HAVING), repo link, and a publish checklist. Delivered to the author in chat for publishing.
 - Tried to feature the repo on my GitHub profile via the API — the `updateUserPinnedItems` GraphQL mutation no longer exists on GitHub's schema, so featuring must be done from the profile UI ("Customize your pins").
 
 **What I learned**
