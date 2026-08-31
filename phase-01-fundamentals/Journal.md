@@ -180,3 +180,31 @@ Each entry links the commit(s) it covers, so anyone can see exactly what changed
 - LinkedIn post draft for Phase 1 (ship publicly).
 
 ---
+
+## Entry 6 — LinkedIn post draft + profile feature
+
+**Date:** 2026-08-30
+
+**Commit(s):** [`087a7b0`](https://github.com/absterjr/data-engineer-roadmap/commit/087a7b0) — "docs(phase-1): linkedin post draft for phase 1 launch"
+
+**What I did**
+
+- Drafted the Phase 1 launch post: `linkedin-post.md` — the "AI rot" angle (rebuild SQL to understand it, not to write it faster), five concrete lessons from the build (order of operations, accidental GROUP BY order, defeating indexes, messy data, WHERE vs HAVING), repo link, and a publish checklist.
+- Tried to feature the repo on my GitHub profile via the API — the `updateUserPinnedItems` GraphQL mutation no longer exists on GitHub's schema, so featuring must be done from the profile UI ("Customize your pins").
+
+**What I learned**
+
+- **GitHub removed the pinning API.** Only the profile UI can pin/feature repos now. Also: gh on Windows mangles GraphQL arguments with quotes — `--input` with a JSON body file is the reliable path.
+- **Writing the post is a second audit.** Every number in the post had to be verified against the repo (541,909 rows, 25% missing CustomerID, four descriptions for 85123A, EXPLAIN output) — the same facts the docs already claim. Two sources agreeing is the pattern this whole project runs on.
+
+**Questions / blockers**
+
+- Post timing: publish now (Phase 1 shipped) or after window functions + tests land?
+
+**Next steps**
+
+- Window functions: implement `ROW_NUMBER()` / running totals in the engine.
+- pytest tests for the engine.
+- Publish the LinkedIn post (link in comments), then add the repo feature to the profile.
+
+---
