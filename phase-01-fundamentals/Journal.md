@@ -148,3 +148,35 @@ Each entry links the commit(s) it covers, so anyone can see exactly what changed
 - LinkedIn post draft for Phase 1 (ship publicly).
 
 ---
+
+## Entry 5 — Docs pass: all markdown synced with progress
+
+**Date:** 2026-08-29
+
+**Commit(s):** [`28c3ffc`](https://github.com/absterjr/data-engineer-roadmap/commit/28c3ffc) — "docs: sync all markdown with current progress"
+
+**What I did**
+
+- Audited all five `.md` files against the actual repo state and fixed every mismatch:
+  - **Root README** — Phase 1 status now links to the folder; added a "What's built so far" block under Phase 1 details; project layout updated to match reality (`Journal.md`, `HOW-IT-WORKS.md`, no phantom `notebooks/`); documented the journal-with-commit-links workflow in "How to use" and a new "How this repo is maintained" section.
+  - **Phase-01 README** — added a "What's in this folder" tree so newcomers see the whole shape at once; every command now states which directory to run it from.
+  - **HOW-IT-WORKS.md** — added "fetch the data first" note (file is gitignored) and the working-directory note.
+  - **sql/README.md** — clarified that the commands work from anywhere.
+- Small code fix to make that true: `run_sql.py` now falls back to the phase folder when a `.sql` path isn't found relative to the current directory.
+
+**What I learned**
+
+- **Docs rot fast.** Five days in, the layout section still described a `notebooks/` folder that never existed, commands assumed a working directory readers wouldn't be in, and the root README didn't point to anything actually built. The audit surfaced a real usability bug (the sql commands broke from the repo root).
+- **A tiny script change fixed five docs.** Instead of documenting "run from phase-01-fundamentals, except these two", one fallback in `run_sql.py` made every command work from anywhere — code beats prose.
+
+**Questions / blockers**
+
+- None — the repo now reads consistently from a first-time visitor's perspective.
+
+**Next steps**
+
+- Window functions: implement `ROW_NUMBER()` / running totals in the engine.
+- pytest tests for the engine.
+- LinkedIn post draft for Phase 1 (ship publicly).
+
+---
