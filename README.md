@@ -55,7 +55,7 @@ To counter "AI rot" — the trap of letting tools do the thinking while your fun
 
 | # | Phase | Focus | Deliverable project | Status |
 |---|-------|-------|----------------------|--------|
-| 1 | Fundamentals | SQL + Python, from the ground up | Rebuild a mini relational engine (filter / join / group-by) in pure Python | 🔨 [in progress](phase-01-fundamentals/) |
+| 1 | Fundamentals | SQL + Python, from the ground up | Rebuild a mini relational engine (filter / join / group-by) in pure Python | ✅ [complete](phase-01-fundamentals/) |
 | 2 | EDA | Exploratory data analysis, statistics, visualization | Full EDA study on a real public dataset with a written report | — |
 | 3 | Databases & data modeling | Schema design, normalization, dimensional modeling | Design + build a warehouse for a fictional e-commerce company | — |
 | 4 | Pipelines | ETL / ELT, orchestration, idempotency, monitoring | End-to-end ELT pipeline: API → land → transform → warehouse | — |
@@ -80,13 +80,13 @@ To counter "AI rot" — the trap of letting tools do the thinking while your fun
 
 **Resources:** [SQLBolt](https://sqlbolt.com) — interactive SQL exercises · [Real Python](https://realpython.com/python-basics/) — Python fundamentals
 
-**LinkedIn post:** Why learning SQL by building it beats memorizing syntax — and how it defends against AI rot.
+**LinkedIn post:** ✅ published — why learning SQL by building it beats memorizing syntax, and how it defends against AI rot.
 
-**What's built so far** (in [`phase-01-fundamentals/`](phase-01-fundamentals/)):
+**What's built** (in [`phase-01-fundamentals/`](phase-01-fundamentals/)):
 
-- `src/engine.py` — a mini relational engine in pure Python: `read_csv` (with type coercion), `project`, `where`, `extend`, `join`, `group_by` + aggregates, `order_by`, `limit`. No SQL libraries.
-- `src/queries.py` — five analytical questions answered with engine ops only (revenue by country, top products, monthly trend, region JOIN, data quality).
-- `sql/` — the rebuild task: [bad vs fixed SQL](phase-01-fundamentals/sql/README.md) for Q1–Q3 with `EXPLAIN QUERY PLAN` proof and alternatives, plus a SQL↔engine cheat sheet.
+- `src/engine.py` — a mini relational engine in pure Python: `read_csv` (with type coercion), `project`, `where`, `extend`, `join` (INNER + LEFT, hash-based), `group_by` + aggregates, `order_by`, `limit`, and window functions (`row_number`, `rank`, `dense_rank`, `running_sum`, `partition_sum`). No SQL libraries.
+- `src/queries.py` — eight analytical questions answered with engine ops only, cross-checked against SQL.
+- `sql/` — the rebuild task: [bad vs fixed SQL](phase-01-fundamentals/sql/README.md) with `EXPLAIN QUERY PLAN` proof and alternatives, plus a [window-functions workout](phase-01-fundamentals/sql/window_functions.sql) and a SQL↔engine cheat sheet.
 - `HOW-IT-WORKS.md` — beginner's guide to the engine, queries, and glossary.
 - `Journal.md` — day-by-day log; every entry links the commit(s) it covers.
 

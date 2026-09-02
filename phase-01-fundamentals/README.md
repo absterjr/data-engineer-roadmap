@@ -2,7 +2,7 @@
 
 SQL + Python, from the ground up.
 
-> **Status:** 🔨 in progress — engine + queries + rebuild task complete; window functions and tests next.
+> **Status:** ✅ complete — shipped with a published LinkedIn post; the repo is featured on the profile.
 
 > **New here?** Read [HOW-IT-WORKS.md](HOW-IT-WORKS.md) first — it explains what the engine and the queries file are, in plain language, with a SQL-to-engine cheat sheet and a glossary.
 
@@ -16,10 +16,11 @@ phase-01-fundamentals/
 ├── HOW-IT-WORKS.md    # beginner's guide to the engine and queries
 ├── Journal.md         # day-by-day log with commit links
 ├── src/engine.py      # the mini relational engine (pure Python, no SQL libs)
-├── src/queries.py     # five analytical questions answered with the engine
+├── src/queries.py     # eight analytical questions answered with the engine
 ├── sql/bad_queries.sql    # rebuild task: the poorly-written versions
 ├── sql/good_queries.sql   # rebuild task: the fixed, indexed versions
 ├── sql/README.md          # rebuild task: detailed explanations + alternatives
+├── sql/window_functions.sql # window-functions workout (Q6-Q8, RANK vs DENSE_RANK)
 └── data/              # gitignored: online_retail.csv, online_retail.db
                        # (regenerate with scripts/fetch_online_retail.py and
                        #  scripts/setup_sqlite.py); country_region.csv is tracked
