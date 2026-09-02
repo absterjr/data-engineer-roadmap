@@ -240,3 +240,36 @@ Each entry links the commit(s) it covers, so anyone can see exactly what changed
 - Optional: purge the 64.5MB DB blob from git history with filter-repo.
 
 ---
+
+## Entry 8 — Phase 1 complete 🎉
+
+**Date:** 2026-09-02
+
+**Commit(s):** [`575c5ab`](https://github.com/absterjr/data-engineer-roadmap/commit/575c5ab) — "docs: phase 1 complete - mark statuses, finalize built list"
+
+**What I did**
+
+- Marked Phase 1 ✅ complete in the root README and the phase README.
+- Published the LinkedIn post ("I rebuilt SQL from scratch — against AI rot") with a custom thumbnail, and featured the repo on my GitHub profile.
+
+**What shipped in this phase, end to end**
+
+- A mini relational engine in pure Python — no SQL libraries: `read_csv` with type coercion, `project`, `where`, `extend`, `join` (INNER + LEFT, hash-based), `group_by` + aggregates, `order_by`, `limit`, and window functions (`row_number`, `rank`, `dense_rank`, `running_sum`, `partition_sum`), with clear errors for missing columns, files, and bad arguments.
+- Eight analytical questions answered by the engine, cross-checked against SQL.
+- A SQL rebuild task: 10 bad-vs-fixed queries with real `EXPLAIN QUERY PLAN` proof, indexing trade-offs, and a window-functions workout — plus a SQL↔engine cheat sheet.
+- A beginner's guide (`HOW-IT-WORKS.md`) and this journal, with every commit linked.
+
+**What I learned across the whole phase**
+
+- **First principles is a forcing function.** Building `GROUP BY` by hand teaches why ORDER BY exists; building a hash join teaches why indexes matter. You can't un-know that.
+- **Two independent implementations beat one test suite.** The engine↔SQL cross-check caught a real semantic bug (Q6 ranking line items instead of products) that I would never have noticed with tests alone.
+- **Public shipping changes how you work.** Knowing every commit gets journaled and every number gets verified against the repo made the work cleaner — and the LinkedIn post forced a final audit of every claim.
+- **Small tooling choices compound.** One `gitignore` pattern anchored to the wrong directory shipped a 64.5MB blob and silently dropped a file from the repo. Infrastructure mistakes are silent until they aren't.
+
+**Carried forward**
+
+- pytest suite for the engine — the one open engineering item; I'll pick it up as a standing task alongside Phase 2 rather than blocking the phase on it.
+- Optional: purge the 64.5MB DB blob from git history.
+- Next: **Phase 2 — EDA** on a real public dataset, with a written report.
+
+---
