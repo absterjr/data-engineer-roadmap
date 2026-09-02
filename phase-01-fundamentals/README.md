@@ -2,7 +2,7 @@
 
 SQL + Python, from the ground up.
 
-> **Status:** ✅ complete — shipped with a published LinkedIn post; the repo is featured on the profile.
+> **Status:** ✅ complete — shipped with a [published LinkedIn post](https://www.linkedin.com/posts/absterjr_dataengineering-sql-firstprinciples-share-7500233340407595009-fFk7/); the repo is featured on the profile.
 
 > **New here?** Read [HOW-IT-WORKS.md](HOW-IT-WORKS.md) first — it explains what the engine and the queries file are, in plain language, with a SQL-to-engine cheat sheet and a glossary.
 

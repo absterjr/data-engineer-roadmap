@@ -80,7 +80,7 @@ To counter "AI rot" — the trap of letting tools do the thinking while your fun
 
 **Resources:** [SQLBolt](https://sqlbolt.com) — interactive SQL exercises · [Real Python](https://realpython.com/python-basics/) — Python fundamentals
 
-**LinkedIn post:** ✅ published — why learning SQL by building it beats memorizing syntax, and how it defends against AI rot.
+**LinkedIn post:** ✅ [published](https://www.linkedin.com/posts/absterjr_dataengineering-sql-firstprinciples-share-7500233340407595009-fFk7/) — why learning SQL by building it beats memorizing syntax, and how it defends against AI rot.
 
 **What's built** (in [`phase-01-fundamentals/`](phase-01-fundamentals/)):
 

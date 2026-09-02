@@ -250,7 +250,7 @@ Each entry links the commit(s) it covers, so anyone can see exactly what changed
 **What I did**
 
 - Marked Phase 1 ✅ complete in the root README and the phase README.
-- Published the LinkedIn post ("I rebuilt SQL from scratch — against AI rot") with a custom thumbnail, and featured the repo on my GitHub profile.
+- Published the LinkedIn post — ["I rebuilt SQL from scratch — against AI rot"](https://www.linkedin.com/posts/absterjr_dataengineering-sql-firstprinciples-share-7500233340407595009-fFk7/) — with a custom thumbnail, and featured the repo on my GitHub profile.
 
 **What shipped in this phase, end to end**
 
