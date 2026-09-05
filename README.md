@@ -56,7 +56,7 @@ To counter "AI rot" — the trap of letting tools do the thinking while your fun
 | # | Phase | Focus | Deliverable project | Status |
 |---|-------|-------|----------------------|--------|
 | 1 | Fundamentals | SQL + Python, from the ground up | Rebuild a mini relational engine (filter / join / group-by) in pure Python | ✅ [complete](phase-01-fundamentals/) |
-| 2 | EDA | Exploratory data analysis, statistics, visualization | Full EDA study on a real public dataset with a written report | — |
+| 2 | EDA | Exploratory data analysis, statistics, visualization | Full EDA study on a real public dataset with a written report | 🔨 [in progress](phase-02-eda/) |
 | 3 | Databases & data modeling | Schema design, normalization, dimensional modeling | Design + build a warehouse for a fictional e-commerce company | — |
 | 4 | Pipelines | ETL / ELT, orchestration, idempotency, monitoring | End-to-end ELT pipeline: API → land → transform → warehouse | — |
 | 5 | Big data & cloud | Distributed concepts, Spark, object storage, cloud free tiers | Process a large dataset with Spark vs pandas — a measured comparison | — |
