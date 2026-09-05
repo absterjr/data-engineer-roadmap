@@ -273,3 +273,21 @@ Each entry links the commit(s) it covers, so anyone can see exactly what changed
 - Next: **Phase 2 — EDA** on a real public dataset, with a written report.
 
 ---
+
+## Entry 9 — Beginner comment pass (cross-phase)
+
+**Date:** 2026-09-04
+
+**Commit(s):** [`6542722`](https://github.com/absterjr/data-engineer-roadmap/commit/6542722) — "docs: beginner comments across all python code (phases 1 & 2)"
+
+**What I did**
+
+- Re-commented all Phase 1 Python for beginners: every function in `engine.py` and `queries.py` now explains WHAT it does and HOW it works — the `_coerce` cascade, the Table-in/Table-out contract, the hash-join mechanic, closure-based aggregates, and why window functions write results back at original row indexes.
+- Same pass applied to the repo-level scripts (`fetch_online_retail.py`, `setup_sqlite.py`, `run_sql.py`).
+- Also removed the `# <- bug N` markers from Phase 2's `broken_eda.py` — they were pointing at every bug and spoiling the fix-it-first exercise. Bugs unchanged, verified output identical.
+
+**What I learned**
+
+- Writing "how it works" comments is a design review in disguise: explaining *why* the join builds an index first, or why windows write back at original positions, forced me to re-derive each mechanism. If a comment is hard to write, the code is hard to understand.
+
+---

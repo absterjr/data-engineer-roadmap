@@ -39,3 +39,20 @@ Day-by-day log for the EDA phase. Every entry links the commit(s) it covers.
 - Run the analysis, read the charts, write the business answers into the phase README.
 
 ---
+
+## Entry 2 — Beginner comment pass (cross-phase)
+
+**Date:** 2026-09-04
+
+**Commit(s):** [`6542722`](https://github.com/absterjr/data-engineer-roadmap/commit/6542722) — "docs: beginner comments across all python code (phases 1 & 2)"
+
+**What I did**
+
+- Re-commented all Phase 2 Python for beginners: `vizz/svg.py` now opens with the four-step "how a chart library works" (reserve space → scale → ticks → emit strings), the 1-2-5 tick algorithm is walked through line by line, and every chart documents its geometry (slots, draw order, the scale formula). `ascii.py`, `clean.py`, and `analysis.py` got the same treatment.
+- Removed the bug markers from `broken/broken_eda.py` — they made the exercise trivial. Bugs and output verified unchanged.
+
+**What I learned**
+
+- Comments that explain the SCALE FORMULA once (`pixel = start + value/max * size`) do more for a beginner than any API list — every chart is that formula wearing different geometry.
+
+---
