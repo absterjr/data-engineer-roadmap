@@ -8,7 +8,7 @@ Day-by-day log for the EDA phase. Every entry links the commit(s) it covers.
 
 **Date:** 2026-09-03
 
-**Commit(s):** (this entry)
+**Commit(s):** [`fda49b4`](https://github.com/absterjr/data-engineer-roadmap/commit/fda49b4) — "feat(phase-2): EDA scaffold - vizz library, broken EDA, business questions"
 
 **What I did**
 
