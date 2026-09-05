@@ -14,6 +14,9 @@ Rules of the game:
   - The bugs are realistic. Several are bugs you have already written
     yourself at some point.
   - 'It runs' is not 'it works'.
+
+Read each function's docstring as the author's INTENT, then check
+whether the code actually delivers on it. That gap is where bugs live.
 """
 from __future__ import annotations
 
@@ -25,54 +28,58 @@ DATA = Path(__file__).resolve().parent.parent.parent / "phase-01-fundamentals" /
 
 
 def load(path: Path = DATA) -> pd.DataFrame:
-    """Load the raw transactions."""
+    """Load the raw transaction table from the CSV."""
     return pd.read_csv(path)
 
 
 def clean(df: pd.DataFrame) -> pd.DataFrame:
-    """Drop junk rows so the analysis only sees real transactions."""
-    df = df.dropna()                                   # <- bug 1
+    """Drop junk rows so the analysis only sees real transactions.
+
+    Intended to keep the frame tidy: no missing values, no zero/negative
+    quantities, and Revenue computed for later use.
+    """
+    df = df.dropna()
     df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"])
     df["Revenue"] = df["Quantity"] * df["UnitPrice"]
-    df = df[df["Quantity"] > 0]                        # <- bug 2
+    df = df[df["Quantity"] > 0]
     return df
 
 
 def total_revenue(df: pd.DataFrame) -> float:
-    """Total revenue across the store."""
-    return df["Quantity"].sum() * df["UnitPrice"].mean()   # <- bug 3
+    """Total revenue across the store, in pounds."""
+    return df["Quantity"].sum() * df["UnitPrice"].mean()
 
 
 def top_countries(df: pd.DataFrame, n: int = 5) -> pd.Series:
-    """The n countries that spend the most."""
-    t = df.groupby("Country")["Revenue"].sum().sort_values()   # <- bug 4
+    """The n countries that spend the most, as a Series."""
+    t = df.groupby("Country")["Revenue"].sum().sort_values()
     return t.head(n)
 
 
 def uk_share(df: pd.DataFrame) -> float:
-    """What fraction of revenue comes from the UK? Also tag UK rows
+    """What fraction of revenue comes from the UK? Also tags UK rows
     with their revenue share for later."""
     uk = df[df["Country"] == "United Kingdom"]
-    uk["Share"] = uk["Revenue"] / uk["Revenue"].sum()          # <- bug 5
+    uk["Share"] = uk["Revenue"] / uk["Revenue"].sum()
     return uk["Revenue"].sum() / df["Revenue"].sum()
 
 
 def count_returns(df: pd.DataFrame) -> int:
     """How many returned line items are in the data?"""
-    real_sales = df[df["Quantity"] > 0]                        # <- bug 6
+    real_sales = df[df["Quantity"] > 0]
     return int((real_sales["Quantity"] < 0).sum())
 
 
 def busiest_month(df: pd.DataFrame) -> int:
     """Which month number (1-12) had the highest revenue this year?"""
-    recent = df[df["InvoiceDate"].dt.year == 2012]             # <- bug 7
+    recent = df[df["InvoiceDate"].dt.year == 2012]
     by_month = recent.groupby(recent["InvoiceDate"].dt.month)["Revenue"].sum()
     return int(by_month.idxmax())
 
 
 def unique_customers(df: pd.DataFrame) -> int:
     """How many unique customers does the store have?"""
-    return len(df)                                             # <- bug 8
+    return len(df)
 
 
 if __name__ == "__main__":

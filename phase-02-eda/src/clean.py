@@ -6,19 +6,12 @@ Reads the same CSV as Phase 1 and produces analysis-ready frames:
     df = clean(load())
     rev = sales(df)          # revenue-safe rows only
 
-Cleaning decisions (each one is a business decision, not just code):
-  1. InvoiceDate  -> real datetime (the CSV stores ISO text)
-  2. Revenue      -> Quantity * UnitPrice, computed once, on raw rows
-  3. IsCancelled  -> InvoiceNo starting with 'C' (credit notes);
-                     excluded from revenue, analyzed separately
-  4. IsReturn     -> negative Quantity on a normal invoice (a return
-                     against an earlier sale); excluded from revenue,
-                     analyzed in the returns question
-  5. HasCustomer  -> ~25% of rows have no CustomerID (guest checkouts or
-                     data loss). Kept for product/time analysis, excluded
-                     from customer-level analysis -- never silently dropped.
-  6. UnitPrice<=0 -> zero/negative-price lines are adjustments (e.g. 'P',
-                    DOTCOM postage fixes); excluded from revenue.
+WHY A CLEANING MODULE AT ALL?
+Because "cleaning" is not code — it's a list of BUSINESS DECISIONS.
+Every rule below is a choice someone has to defend: what counts as a
+sale, what happens to missing customers, what a negative quantity means.
+Centralizing those decisions in one documented place means every
+analysis in the project inherits the same definitions.
 """
 from __future__ import annotations
 
@@ -33,7 +26,11 @@ DEFAULT_DATA = (
 
 
 def load(path: str | Path = DEFAULT_DATA) -> pd.DataFrame:
-    """Load the raw CSV. Raises with a hint if the dataset is missing."""
+    """Load the raw CSV. Raises with a hint if the dataset is missing.
+
+    (The dataset is gitignored, so a fresh clone needs the fetch script
+    first — telling the user that beats a bare FileNotFoundError.)
+    """
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(
@@ -44,25 +41,35 @@ def load(path: str | Path = DEFAULT_DATA) -> pd.DataFrame:
 
 
 def clean(df: pd.DataFrame) -> pd.DataFrame:
-    """Apply the six documented rules. Returns a new frame."""
+    """Apply the six documented rules. Returns a NEW frame (df.copy()
+    first — mutating a caller's DataFrame is how analyses corrupt each
+    other silently)."""
     df = df.copy()
 
-    # 1. real dates
+    # 1. real dates: the CSV stores ISO text ('2010-12-01 08:26:00'),
+    #    which pandas parses natively. Everything time-based needs this.
     df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"])
 
-    # 2. revenue on every row (analysis frames filter later)
+    # 2. revenue on every row, computed ONCE here. Analysis frames
+    #    filter later — but the formula itself must exist on all rows.
     df["Revenue"] = df["Quantity"] * df["UnitPrice"]
 
-    # 3. cancelled invoices (credit notes): 'C' prefix
+    # 3. cancelled invoices (credit notes): InvoiceNo starts with 'C'.
+    #    These are REFUNDS of earlier orders. Excluded from revenue,
+    #    analyzed separately in the returns question.
     df["IsCancelled"] = df["InvoiceNo"].astype(str).str.startswith("C")
 
-    # 4. returns: negative quantity on a normal invoice
+    # 4. returns: negative Quantity on a NORMAL invoice (no 'C').
+    #    Spoiler for the analysis: these turn out to be zero-price
+    #    write-offs, not refunds — the analysis proves it.
     df["IsReturn"] = (~df["IsCancelled"]) & (df["Quantity"] < 0)
 
-    # 5. customer known?
+    # 5. ~25% of rows have no CustomerID (guest checkouts or data loss).
+    #    We NEVER silently drop them: flag now, filter per-question.
     df["HasCustomer"] = df["CustomerID"].notna()
 
-    # 6. flag zero/negative prices (adjustment lines)
+    # 6. zero/negative prices are adjustment lines (postage fixes, 'P'
+    #    entries) — they carry no real revenue either way.
     df["IsAdjustment"] = df["UnitPrice"] <= 0
 
     return df
@@ -70,12 +77,17 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
 
 def sales(df: pd.DataFrame) -> pd.DataFrame:
     """Revenue-safe rows: real sales only (no cancellations, returns,
-    adjustments). This is THE frame for every revenue number."""
+    adjustments). This is THE frame for every revenue number — one
+    definition, used everywhere, so no two charts disagree."""
     return df[(~df["IsCancelled"]) & (~df["IsReturn"]) & (~df["IsAdjustment"])]
 
 
 def summary(df: pd.DataFrame) -> str:
-    """One-glance data-quality report after cleaning."""
+    """One-glance data-quality report after cleaning.
+
+    The first thing any EDA should print: how many rows, how many are
+    problematic, and what date range the data actually covers (the
+    'partial month' trap lives here)."""
     rows = len(df)
     return (
         f"rows            : {rows:,}\n"
