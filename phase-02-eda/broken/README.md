@@ -16,6 +16,23 @@ in ~90 lines.
 5. Done when: revenue ≈ **£10.7M**, UK share ≈ **84.6%**, busiest month
    **11**, unique customers **≈ 4,372**, returned line items **1,336**.
 
+## Compare side by side
+
+`broken_eda_fixed.py` is the corrected twin: same functions, same
+signatures, same report — every fix carries a `BUG n FIX` comment
+explaining what was wrong and why.
+
+```bash
+# terminal diff
+git diff --no-index broken/broken_eda.py broken/broken_eda_fixed.py
+
+# or in VS Code: select both files in the Explorer,
+# right-click -> "Compare Selected"
+```
+
+Read it function by function: for each pair, first predict what the fix
+was, then check the comment.
+
 ## Hints (one per bug, mild spoilers)
 
 1. "After cleaning" loses a quarter of the rows. What did `dropna()` throw away?

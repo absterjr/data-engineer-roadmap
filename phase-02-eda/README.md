@@ -23,7 +23,8 @@ Exploratory data analysis on the same Online Retail dataset — from basic chart
 No matplotlib, no PIL, no third-party anything — stdlib only. SVG is just text, so pure Python can draw:
 
 - `Figure` — axes with nice 1-2-5 ticks, gridlines, titles, palette
-- `barh` / `bar` / `line` / `histogram` / `scatter`
+- Standard: `barh` / `bar` / `line` / `histogram` / `scatter`
+- Unconventional: `calendar_heatmap` (GitHub-style day grid), `slope` (before/after), `ridgeline` (joyplot distributions), `waffle` (100 countable squares)
 - `vizz.ascii` — terminal charts: `barh`, `histogram`, and `sparkline` (▁▂▃▄▅▆▇█)
 
 ```python
@@ -57,14 +58,28 @@ The dataset is reused from Phase 1 — get it with `python scripts/fetch_online_
 
 ```
 phase-02-eda/
-├── README.md          # you are here
-├── Journal.md         # day-by-day log with commit links
-├── broken/            # fix-it-first exercise (do this BEFORE reading src/)
-├── src/vizz/          # the from-scratch chart library (SVG + ASCII)
-├── src/clean.py       # documented cleaning pipeline
-├── src/analysis.py    # business questions answered with EDA
-└── charts/            # generated SVG charts (committed — they're just text)
+├── README.md              # you are here
+├── Journal.md             # day-by-day log with commit links
+├── broken/                # fix-it-first exercise (do this BEFORE reading src/)
+│   ├── broken_eda.py      #   the buggy script - find the 8 bugs
+│   ├── broken_eda_fixed.py#   the corrected twin - compare side by side
+│   └── README.md          #   rules, hints, answers
+├── src/vizz/              # the from-scratch chart library (SVG + ASCII)
+├── src/clean.py           # documented cleaning pipeline
+├── src/analysis.py        # business questions answered with EDA
+└── charts/                # generated SVG charts (committed — they're just text)
 ```
+
+## The unconventional charts
+
+Standard charts answer "how much per category". These four answer questions bars can't:
+
+| Chart | File | Question it answers |
+|-------|------|---------------------|
+| Calendar heatmap | `calendar_nov2011.svg` | What did *every single day* of the peak month look like? (weekly cycle, end-of-month push, dead weekends — as texture) |
+| Slope | `slope_countries.svg` | How did each top market move H1 → H2 2011? (UK +50%, EIRE +56%, Australia −29% — direction is the message) |
+| Ridgeline | `ridgeline_order_values.svg` | How does the *shape* of order values differ per quarter? (medians barely move; the volume grows) |
+| Waffle | `waffle_regions.svg` | Revenue share in 100 countable squares — 85 of them are the UK |
 
 ## Resources
 

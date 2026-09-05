@@ -115,6 +115,23 @@ def nice_ticks(lo: float, hi: float, target: int = 5) -> list[float]:
     return ticks
 
 
+def _lerp_color(c1: str, c2: str, t: float) -> str:
+    """Linear interpolation between two hex colors — the engine of every
+    color scale. t=0 returns c1, t=1 returns c2, t=0.5 the midpoint.
+
+    HOW: split '#RRGGBB' into three channels, lerp each channel
+    separately, reassemble. (Color ramps made of 2+ stops are just
+    several of these chained together.)
+    """
+    t = max(0.0, min(1.0, t))
+    r1, g1, b1 = int(c1[1:3], 16), int(c1[3:5], 16), int(c1[5:7], 16)
+    r2, g2, b2 = int(c2[1:3], 16), int(c2[3:5], 16), int(c2[5:7], 16)
+    r = round(r1 + (r2 - r1) * t)
+    g = round(g1 + (g2 - g1) * t)
+    b = round(b1 + (b2 - b1) * t)
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
 class Figure:
     """A single SVG chart. Create it, call ONE chart method, save it.
 
@@ -366,6 +383,228 @@ class Figure:
         if xlabel:
             self._text((x0 + x1) / 2, y1 + 38, xlabel, size=11, fill=MUTED,
                        anchor="middle", mono=True)
+
+    # -- unconventional charts ----------------------------------------------
+    # Four chart types you rarely see in dashboards — each earns its place
+    # by answering a question bars and lines answer badly.
+
+    def calendar_heatmap(self, dates, values, color_low: str = CARD,
+                         color_high: str = "#00D4FF"):
+        """Calendar heatmap — a value per DAY laid out as a real calendar.
+
+        WHAT: GitHub's contribution graph. Columns are weeks, rows are
+        weekdays; color encodes the value. Unbeatable for 'show me every
+        day at once' — daily spikes, quiet weekends, and end-of-month
+        surges are visible as PATTERNS, not as 365 bars.
+
+        HOW:
+          1. map each date to (week column, weekday row) using ISO
+             calendar math: col = ISO week number - first week, row = weekday
+          2. color each day's cell by interpolating color_low -> color_high
+             with t = value's position in the min..max range
+          3. month labels above the first week in which they appear
+        """
+        x0, y0, x1, y1 = self._frame()
+        # normalize input to (date, value) pairs, sorted by date
+        pairs = sorted(
+            (d.date() if hasattr(d, "date") else d, v) for d, v in zip(dates, values)
+        )
+        if not pairs:
+            return
+        first = pairs[0][0]
+
+        # week column of a date = whole weeks since the first date
+        def col_of(d):
+            return (d - first).days // 7
+
+        n_weeks = max(col_of(d) for d, _ in pairs) + 1
+        vmax = max(v for _, v in pairs)
+        vmin = min(v for _, v in pairs)
+        span = (vmax - vmin) or 1
+
+        cw = (x1 - x0) / n_weeks
+        ch = (y1 - y0) / 7
+        pad = min(cw, ch) * 0.12         # gap between cells
+
+        last_month = None
+        for d, v in pairs:
+            col, row = col_of(d), d.weekday()   # Monday = row 0
+            t = (v - vmin) / span
+            cx, cy = x0 + col * cw, y0 + row * ch
+            self._rect(cx + pad, cy + pad, cw - 2 * pad, ch - 2 * pad,
+                       _lerp_color(color_low, color_high, t), rx=2)
+            # month label: once, above the first week where a new month starts
+            if d.month != last_month:
+                self._text(cx + pad, y0 - 8, d.strftime("%b"), size=11,
+                           fill=MUTED, anchor="start", mono=True)
+                last_month = d.month
+        # weekday labels on the left (Mon, Wed, Fri only — thin to fit)
+        for r, name in [(0, "Mon"), (2, "Wed"), (4, "Fri")]:
+            self._text(x0 - 8, y0 + ch * (r + 0.5) + 4, name, size=10.5,
+                       fill=MUTED, anchor="end", mono=True)
+
+    def slope(self, items, left_values, right_values,
+              left_label: str = "before", right_label: str = "after"):
+        """Slope chart — before vs after for the same categories.
+
+        WHAT: two vertical axes (left = before, right = after); one line
+        per category connecting its two values. Lines fanning UP grew,
+        lines diving DOWN shrank — direction is the message. Perfect for
+        'how did our top markets move between two periods?', which a
+        grouped bar chart buries.
+
+        HOW: both sides share ONE y-scale (comparable!), each item is a
+        two-point polyline colored by whether it rose or fell.
+        """
+        color = self._next_color()
+        x0, y0, x1, y1 = self._frame()
+        pad = 150                          # room for labels outside the axes
+        xl, xr = x0 + pad, x1 - pad
+        vmax = max(max(left_values), max(right_values)) * 1.06
+        y = lambda v: y1 - (v / vmax) * (y1 - y0)
+
+        self._line(xl, y0, xl, y1, GRID, sw=1.5)
+        self._line(xr, y0, xr, y1, GRID, sw=1.5)
+        self._text(xl, y0 - 12, left_label, size=12, fill=MUTED,
+                   anchor="middle", mono=True)
+        self._text(xr, y0 - 12, right_label, size=12, fill=MUTED,
+                   anchor="middle", mono=True)
+        for t in nice_ticks(0, vmax):
+            self._text(xl - 8, y(t) + 4, _fmt(t), size=10.5, fill=MUTED,
+                       anchor="end", mono=True)
+
+        for lab, lv, rv in zip(items, left_values, right_values):
+            rose = rv >= lv
+            c = "#7BED9F" if rose else "#FF6B6B"   # mint up, coral down
+            self._line(xl, y(lv), xr, y(rv), c, sw=2)
+            self._circle(xl, y(lv), 3.5, c)
+            self._circle(xr, y(rv), 3.5, c)
+            self._text(xl - 10, y(lv) + 4, str(lab), size=11.5, fill=TEXT,
+                       anchor="end")
+            self._text(xr + 10, y(rv) + 4, str(lab), size=11.5, fill=TEXT,
+                       anchor="start")
+        self._text((xl + xr) / 2, y1 + 30, "mint = up · coral = down",
+                   size=10.5, fill=MUTED, anchor="middle", mono=True)
+
+    def ridgeline(self, series: list[tuple[str, list]], bins: int = 30,
+                  peak_fraction: float = 0.55, xlabel: str = "",
+                  prefix: str = ""):
+        """Ridgeline plot ('joyplot') — one distribution per group,
+        stacked with overlap so the whole family reads as a landscape.
+
+        WHAT: compares DISTRIBUTIONS across groups. A bar chart of
+        averages hides shape — bimodal? long-tailed? A ridgeline shows
+        every group's entire distribution at once. Here: order-value
+        distributions per quarter.
+
+        HOW:
+          1. all groups share ONE set of bin edges (comparable shapes)
+          2. per group: histogram counts -> a polygon whose top edge is
+             the distribution, sitting on that group's baseline
+          3. baselines march UP the canvas; ridges are drawn back-to-
+             front (top first) so each overlaps the one behind it —
+             the overlap IS the aesthetic
+          4. fill is the dark panel color, stroke is the group color:
+             only the top edge of each ridge stays visible.
+        """
+        x0, y0, x1, y1 = self._frame(ylabel=xlabel)
+        n = len(series)
+        all_vals = [v for _, vals in series for v in vals]
+        lo, hi = min(all_vals), max(all_vals)
+        if hi == lo:
+            hi = lo + 1
+        width = (hi - lo) / bins
+
+        # shared bin edges -> shared x positions
+        xs = [x0 + (x1 - x0) * i / bins for i in range(bins)]
+        ridge_h = (y1 - y0) * peak_fraction
+        # baselines: first group at the bottom, later groups march up
+        base = lambda i: y1 - i * ((y1 - y0) - ridge_h) / max(1, n - 1) if n > 1 else y1
+
+        vmax = max(
+            max(
+                sum(1 for v in vals if lo + width * b <= v < lo + width * (b + 1))
+                for b in range(bins)
+            )
+            for _, vals in series
+        )
+        if vmax == 0:
+            vmax = 1
+
+        # draw top (last) groups first so bottom groups overlap them
+        for i in range(n - 1, -1, -1):
+            lab, vals = series[i]
+            counts = [0] * bins
+            for v in vals:
+                counts[min(bins - 1, int((v - lo) / width))] += 1
+            pts = [(x0, base(i))] + [
+                (xs[b], base(i) - counts[b] / vmax * ridge_h) for b in range(bins)
+            ] + [(x1, base(i))]
+            poly = " ".join(f"{px:.1f},{py:.1f}" for px, py in pts)
+            c = PALETTE[i % len(PALETTE)]
+            self.el.append(
+                f'<polygon points="{poly}" fill="{CARD}" fill-opacity="0.92" '
+                f'stroke="{c}" stroke-width="1.8"/>'
+            )
+            self._text(x0 - 8, base(i) - 4, str(lab), size=11, fill=TEXT,
+                       anchor="end", mono=True)
+        # value axis labels along the bottom
+        for t in nice_ticks(lo, hi, 5):
+            x = x0 + (t - lo) / (hi - lo) * (x1 - x0)
+            self._text(x, y1 + 18, _fmt(t, prefix), size=10.5, fill=MUTED,
+                       anchor="middle", mono=True)
+
+    def waffle(self, labels, values, total_squares: int = 100, cols: int = 10,
+               prefix: str = ""):
+        """Waffle chart — the total as a grid of unit squares.
+
+        WHAT: each square = one unit (usually 1% of the total). Where a
+        pie chart forces angle-reading, a waffle lets you literally
+        COUNT squares. Great for shares that matter in whole units
+        ('84 of 100 squares are the UK').
+
+        HOW:
+          1. convert values to square counts with LARGEST-REMAINDER
+             rounding so the counts sum to exactly total_squares
+             (naive rounding would give 99 or 101 squares)
+          2. fill the grid row by row, one color per category
+          3. legend to the right: swatch + label + true share
+        """
+        x0, y0, x1, y1 = self._frame()
+        total = sum(values) or 1
+
+        # largest-remainder rounding: floor each share, then hand the
+        # leftover squares to the biggest fractional remainders
+        exact = [v / total * total_squares for v in values]
+        counts = [int(e) for e in exact]
+        remainder = total_squares - sum(counts)
+        order = sorted(range(len(values)), key=lambda i: exact[i] - counts[i], reverse=True)
+        for i in order[:remainder]:
+            counts[i] += 1
+
+        rows = math.ceil(total_squares / cols)
+        cell = min((x1 - x0 - 200) / cols, (y1 - y0) / rows)   # 200px for legend
+        gx, gy = x0, y0 + ((y1 - y0) - cell * rows) / 2        # vertically center
+
+        idx = 0
+        for cat_i, count in enumerate(counts):
+            c = PALETTE[cat_i % len(PALETTE)]
+            for _ in range(count):
+                if idx >= total_squares:
+                    break
+                r, cc = divmod(idx, cols)
+                self._rect(gx + cc * cell + 1.5, gy + r * cell + 1.5,
+                           cell - 3, cell - 3, c, rx=2, opacity=0.95)
+                idx += 1
+
+        # legend: swatch, label, and the real (unrounded) share
+        ly = y0 + 10
+        for cat_i, (lab, v) in enumerate(zip(labels, values)):
+            c = PALETTE[cat_i % len(PALETTE)]
+            self._rect(x0 + cols * cell + 24, ly - 9, 12, 12, c, rx=2)
+            self._text(x0 + cols * cell + 44, ly + 2, f"{lab}  {_fmt(v / total * 100, prefix)}%",
+                       size=12, fill=TEXT)
+            ly += 24
 
     # -- output -------------------------------------------------------------
 

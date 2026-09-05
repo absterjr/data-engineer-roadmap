@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" width="900" height="560">
+  <rect x="0.0" y="0.0" width="900.0" height="560.0" fill="#1F3864" rx="0" opacity="1.0"/>
+  <text x="24.0" y="34.0" fill="#FFFFFF" font-size="19" font-weight="700" text-anchor="start" letter-spacing="0.5" opacity="1.0" font-family="'Inter', sans-serif">Q1+ - Top 6 markets: H1 2011 vs H2 2011 (slope)</text>
+  <line x1="238.0" y1="64.0" x2="238.0" y2="500.0" stroke="#2A4A7F" stroke-width="1.5" opacity="1.0"/>
+  <line x1="714.0" y1="64.0" x2="714.0" y2="500.0" stroke="#2A4A7F" stroke-width="1.5" opacity="1.0"/>
+  <text x="238.0" y="52.0" fill="#7FA8D9" font-size="12" font-weight="400" text-anchor="middle" letter-spacing="0.5" opacity="1.0" font-family="'Courier New', monospace">H1 2011</text>
+  <text x="714.0" y="52.0" fill="#7FA8D9" font-size="12" font-weight="400" text-anchor="middle" letter-spacing="0.5" opacity="1.0" font-family="'Courier New', monospace">H2 2011</text>
+  <text x="230.0" y="504.0" fill="#7FA8D9" font-size="10.5" font-weight="400" text-anchor="end" letter-spacing="0.5" opacity="1.0" font-family="'Courier New', monospace">0</text>
+  <text x="230.0" y="338.3" fill="#7FA8D9" font-size="10.5" font-weight="400" text-anchor="end" letter-spacing="0.5" opacity="1.0" font-family="'Courier New', monospace">2.0M</text>
+  <text x="230.0" y="172.6" fill="#7FA8D9" font-size="10.5" font-weight="400" text-anchor="end" letter-spacing="0.5" opacity="1.0" font-family="'Courier New', monospace">4.0M</text>
+  <text x="230.0" y="6.8" fill="#7FA8D9" font-size="10.5" font-weight="400" text-anchor="end" letter-spacing="0.5" opacity="1.0" font-family="'Courier New', monospace">6.0M</text>
+  <line x1="238.0" y1="225.5" x2="714.0" y2="88.7" stroke="#7BED9F" stroke-width="2" opacity="1.0"/>
+  <circle cx="238.0" cy="225.5" r="3.5" fill="#7BED9F" opacity="1.0"/>
+  <circle cx="714.0" cy="88.7" r="3.5" fill="#7BED9F" opacity="1.0"/>
+  <text x="228.0" y="229.5" fill="#FFFFFF" font-size="11.5" font-weight="400" text-anchor="end" letter-spacing="0.5" opacity="1.0" font-family="'Inter', sans-serif">United Kingdom</text>
+  <text x="724.0" y="92.7" fill="#FFFFFF" font-size="11.5" font-weight="400" text-anchor="start" letter-spacing="0.5" opacity="1.0" font-family="'Inter', sans-serif">United Kingdom</text>
+  <line x1="238.0" y1="489.1" x2="714.0" y2="487.9" stroke="#7BED9F" stroke-width="2" opacity="1.0"/>
+  <circle cx="238.0" cy="489.1" r="3.5" fill="#7BED9F" opacity="1.0"/>
+  <circle cx="714.0" cy="487.9" r="3.5" fill="#7BED9F" opacity="1.0"/>
+  <text x="228.0" y="493.1" fill="#FFFFFF" font-size="11.5" font-weight="400" text-anchor="end" letter-spacing="0.5" opacity="1.0" font-family="'Inter', sans-serif">Netherlands</text>
+  <text x="724.0" y="491.9" fill="#FFFFFF" font-size="11.5" font-weight="400" text-anchor="start" letter-spacing="0.5" opacity="1.0" font-family="'Inter', sans-serif">Netherlands</text>
+  <line x1="238.0" y1="491.2" x2="714.0" y2="486.2" stroke="#7BED9F" stroke-width="2" opacity="1.0"/>
+  <circle cx="238.0" cy="491.2" r="3.5" fill="#7BED9F" opacity="1.0"/>
+  <circle cx="714.0" cy="486.2" r="3.5" fill="#7BED9F" opacity="1.0"/>
+  <text x="228.0" y="495.2" fill="#FFFFFF" font-size="11.5" font-weight="400" text-anchor="end" letter-spacing="0.5" opacity="1.0" font-family="'Inter', sans-serif">EIRE</text>
+  <text x="724.0" y="490.2" fill="#FFFFFF" font-size="11.5" font-weight="400" text-anchor="start" letter-spacing="0.5" opacity="1.0" font-family="'Inter', sans-serif">EIRE</text>
+  <line x1="238.0" y1="492.4" x2="714.0" y2="489.9" stroke="#7BED9F" stroke-width="2" opacity="1.0"/>
+  <circle cx="238.0" cy="492.4" r="3.5" fill="#7BED9F" opacity="1.0"/>
+  <circle cx="714.0" cy="489.9" r="3.5" fill="#7BED9F" opacity="1.0"/>
+  <text x="228.0" y="496.4" fill="#FFFFFF" font-size="11.5" font-weight="400" text-anchor="end" letter-spacing="0.5" opacity="1.0" font-family="'Inter', sans-serif">Germany</text>
+  <text x="724.0" y="493.9" fill="#FFFFFF" font-size="11.5" font-weight="400" text-anchor="start" letter-spacing="0.5" opacity="1.0" font-family="'Inter', sans-serif">Germany</text>
+  <line x1="238.0" y1="493.3" x2="714.0" y2="490.1" stroke="#7BED9F" stroke-width="2" opacity="1.0"/>
+  <circle cx="238.0" cy="493.3" r="3.5" fill="#7BED9F" opacity="1.0"/>
+  <circle cx="714.0" cy="490.1" r="3.5" fill="#7BED9F" opacity="1.0"/>
+  <text x="228.0" y="497.3" fill="#FFFFFF" font-size="11.5" font-weight="400" text-anchor="end" letter-spacing="0.5" opacity="1.0" font-family="'Inter', sans-serif">France</text>
+  <text x="724.0" y="494.1" fill="#FFFFFF" font-size="11.5" font-weight="400" text-anchor="start" letter-spacing="0.5" opacity="1.0" font-family="'Inter', sans-serif">France</text>
+  <line x1="238.0" y1="493.3" x2="714.0" y2="495.3" stroke="#FF6B6B" stroke-width="2" opacity="1.0"/>
+  <circle cx="238.0" cy="493.3" r="3.5" fill="#FF6B6B" opacity="1.0"/>
+  <circle cx="714.0" cy="495.3" r="3.5" fill="#FF6B6B" opacity="1.0"/>
+  <text x="228.0" y="497.3" fill="#FFFFFF" font-size="11.5" font-weight="400" text-anchor="end" letter-spacing="0.5" opacity="1.0" font-family="'Inter', sans-serif">Australia</text>
+  <text x="724.0" y="499.3" fill="#FFFFFF" font-size="11.5" font-weight="400" text-anchor="start" letter-spacing="0.5" opacity="1.0" font-family="'Inter', sans-serif">Australia</text>
+  <text x="476.0" y="530.0" fill="#7FA8D9" font-size="10.5" font-weight="400" text-anchor="middle" letter-spacing="0.5" opacity="1.0" font-family="'Courier New', monospace">mint = up · coral = down</text>
+</svg>

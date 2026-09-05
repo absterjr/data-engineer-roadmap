@@ -191,6 +191,96 @@ def bonus_basket(sales: pd.DataFrame) -> None:
     print()
 
 
+def unconventional_charts(df: pd.DataFrame, sales: pd.DataFrame) -> None:
+    """Four chart types you rarely see in dashboards, each earning its
+    place by answering a question bars and lines answer badly:
+
+      calendar heatmap - 'show me every DAY of the peak month at once'
+      slope chart      - 'how did each market move between two periods?'
+      ridgeline        - 'how does the ORDER-VALUE distribution differ
+                          across quarters?' (averages hide shape)
+      waffle           - 'what share of revenue is each region,
+                          in countable squares?'
+    """
+    # --- 1. Calendar heatmap: every day of November 2011 (the peak month).
+    # Weekly cycle + end-of-month push visible as texture, not 30 bars.
+    nov = sales[(sales["InvoiceDate"].dt.year == 2011)
+                & (sales["InvoiceDate"].dt.month == 11)]
+    daily = nov.groupby(nov["InvoiceDate"].dt.date)["Revenue"].sum()
+    fig = Figure(1000, 300, "Q2+ - November 2011, day by day (calendar heatmap)")
+    fig.calendar_heatmap(daily.index, daily.values)
+    fig.save(CHARTS / "calendar_nov2011.svg")
+    print("== Unconventional 1. Calendar heatmap (charts/calendar_nov2011.svg)")
+    print(f"  Nov 2011 revenue          : \u00a3{daily.sum():,.0f} across {len(daily)} days")
+    print(f"  best day                  : {daily.idxmax()}  (\u00a3{daily.max():,.0f})")
+    print()
+
+    # --- 2. Slope chart: top 6 markets, first half vs second half of 2011.
+    # Lines fanning up = a market that grew into the holiday season.
+    y2011 = sales[sales["InvoiceDate"].dt.year == 2011]
+    h1 = y2011[y2011["InvoiceDate"].dt.month <= 6].groupby("Country")["Revenue"].sum()
+    h2 = y2011[y2011["InvoiceDate"].dt.month > 6].groupby("Country")["Revenue"].sum()
+    top = (h1.add(h2, fill_value=0)).nlargest(6).index
+    fig = Figure(900, 560, "Q1+ - Top 6 markets: H1 2011 vs H2 2011 (slope)")
+    fig.slope(list(top),
+              [float(h1.get(c, 0)) for c in top],
+              [float(h2.get(c, 0)) for c in top],
+              left_label="H1 2011", right_label="H2 2011")
+    fig.save(CHARTS / "slope_countries.svg")
+    print("== Unconventional 2. Slope chart (charts/slope_countries.svg)")
+    for c in top:
+        delta = (h2.get(c, 0) - h1.get(c, 0)) / max(h1.get(c, 0), 1)
+        print(f"  {c:<16} H1 \u00a3{h1.get(c, 0) / 1000:>9,.0f}k  H2 \u00a3{h2.get(c, 0) / 1000:>9,.0f}k"
+              f"  ({delta:+.0%})")
+    print()
+
+    # --- 3. Ridgeline: the DISTRIBUTION of order values per quarter.
+    # Averages hide shape; one ridge per quarter shows every distribution
+    # at once. Values clipped at £1.5k so wholesale giants don't flatten
+    # the retail bulk (the bonus histogram covers the long tail).
+    q = sales.copy()
+    q["Quarter"] = q["InvoiceDate"].dt.to_period("Q").astype(str)
+    orders = q.groupby(["Quarter", "InvoiceNo"])["Revenue"].sum().reset_index()
+    series = sorted(
+        ((quart, g["Revenue"].clip(upper=1500)) for quart, g in orders.groupby("Quarter")),
+        key=lambda t: t[0],
+    )
+    fig = Figure(1000, 620, "Bonus - Order value distributions by quarter (ridgeline)")
+    fig.ridgeline(series, bins=32, xlabel="order value (clipped at \u00a31,500)")
+    fig.save(CHARTS / "ridgeline_order_values.svg")
+    print("== Unconventional 3. Ridgeline (charts/ridgeline_order_values.svg)")
+    for quart, vals in series:
+        print(f"  {quart}: median order \u00a3{vals.median():>7,.0f}   "
+              f"({len(vals):,} orders)")
+    print()
+
+    # --- 4. Waffle: revenue share by region, in 100 countable squares.
+    # Reuses Phase 1's country->region lookup; falls back to countries
+    # if that file is missing.
+    regions_path = Path(__file__).resolve().parent.parent.parent \
+        / "phase-01-fundamentals" / "data" / "country_region.csv"
+    by_country = sales.groupby("Country")["Revenue"].sum()
+    if regions_path.exists():
+        mapping = pd.read_csv(regions_path).set_index("Country")["Region"].to_dict()
+        by_region = by_country.groupby(by_country.index.map(mapping)).sum()
+    else:
+        by_region = by_country
+    by_region = by_region.sort_values(ascending=False)
+    # show the top 5 regions and fold the rest into 'Rest' (a waffle with
+    # 15 tiny slices is a pie chart with extra steps)
+    top_regions = by_region.head(5)
+    rest = by_region.iloc[5:].sum()
+    labels = list(top_regions.index) + (["Rest"] if rest > 0 else [])
+    values = list(top_regions.values) + ([float(rest)] if rest > 0 else [])
+    fig = Figure(900, 420, "Q1+ - Revenue share by region (waffle: 1 square = 1%)")
+    fig.waffle(labels, values, total_squares=100, cols=10, prefix="")
+    fig.save(CHARTS / "waffle_regions.svg")
+    print("== Unconventional 4. Waffle (charts/waffle_regions.svg)")
+    for lab, v in zip(labels, values):
+        print(f"  {lab:<14} {v / sum(values):>5.1%}  (\u00a3{v / 1000:,.0f}k)")
+    print()
+
+
 def main() -> None:
     """Run the whole report: clean once, answer every question, save charts."""
     df = cl.clean(cl.load())
@@ -206,6 +296,7 @@ def main() -> None:
     q2_seasonality(sales)
     q3_returns_and_cancellations(df, sales)
     bonus_basket(sales)
+    unconventional_charts(df, sales)
 
     print(f"charts written to: {CHARTS}")
 
