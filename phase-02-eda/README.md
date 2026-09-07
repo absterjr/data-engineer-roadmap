@@ -4,6 +4,8 @@ Exploratory data analysis on the same Online Retail dataset — from basic chart
 
 > **Status:** 🔨 in progress
 
+> **📄 The written report is here: [REPORT.md](REPORT.md)** — every finding, every chart embedded, and the exact code that drew each one.
+
 > **New here?** The dataset and its quirks are documented in [phase-01-fundamentals](../phase-01-fundamentals/README.md) — start with [HOW-IT-WORKS.md](../phase-01-fundamentals/HOW-IT-WORKS.md) if the engine and dataset are new to you.
 
 ## What this phase covers
