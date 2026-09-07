@@ -73,6 +73,31 @@ Day-by-day log for the EDA phase. Every entry links the commit(s) it covers.
 
 ---
 
+## Entry 4 — The written EDA report
+
+**Date:** 2026-09-06
+
+**Commit(s):** [`ddabdf1`](https://github.com/absterjr/data-engineer-roadmap/commit/ddabdf1) — "docs(phase-2): written EDA report with embedded charts + code"
+
+**What I did**
+
+- Wrote `REPORT.md` — the phase's capstone write-up. Structure: the six cleaning decisions as a table → Q1/Q2/Q3 each with (finding → embedded chart → the code that drew it → how to read it) → the basket-shape bonus → all four unconventional charts → conclusions → method notes.
+- All 10 SVGs embedded directly from `charts/` (they render natively on GitHub — another payoff of generating SVG by hand).
+- Every number re-verified before publication — including a claim I hadn't checked before ("largest order ~£168k" → actual £168,469.60 ✓).
+- Linked from the top of the phase README.
+
+**What I learned**
+
+- **Question → code → chart → reading is the teaching loop.** A chart without its five lines of code is a picture; with them, it's a reproducible method. Writing the report revealed how consistent the pipeline's shape is — every question is wrangle → visualize → answer.
+- **A report is an audit.** Publishing every number forced one more verification pass (the £168k order), which is exactly the discipline Phase 1's cross-checking built.
+
+**Next steps**
+
+- Phase 2 LinkedIn post (source material is all in REPORT.md).
+- Learner exercise remains: fix the 8 bugs, compare with the fixed twin.
+
+---
+
 ## Entry 2 — Beginner comment pass (cross-phase)
 
 **Date:** 2026-09-04
