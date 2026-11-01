@@ -27,9 +27,11 @@
 -- ============================================================================
 
 -- Roll everything back first so the builder can be re-run from scratch.
+DROP TABLE IF EXISTS fact_returns;
 DROP TABLE IF EXISTS fact_sales;
 DROP TABLE IF EXISTS dim_date;
 DROP TABLE IF EXISTS dim_customer;
+DROP TABLE IF EXISTS dim_customer_scd;
 DROP TABLE IF EXISTS dim_product;
 
 -- Date dimension: one row per calendar day. In real warehouses this is
@@ -84,4 +86,44 @@ CREATE TABLE fact_sales (
     net_revenue    REAL    NOT NULL,    -- gross - discount
     -- context attribute (see docs/MODELING.md: this is a mini-SCD problem)
     order_status   TEXT    NOT NULL
+);
+
+-- ----------------------------------------------------------------------------
+-- The two "closing the caveats" tables:
+--
+-- dim_customer_scd — SLOWLY CHANGING DIMENSION, TYPE 2:
+--   instead of one row per customer (current address only), one row per
+--   VERSION of the customer. Each version carries valid_from / valid_to
+--   and an is_current flag; history survives. A customer who moved in
+--   2025 has two rows: one for before, one for after.
+--
+-- fact_returns — returns at their own grain:
+--   one row per RETURNED LINE: when it came back, how many units, how
+--   much was refunded. Replaces the order_status hack for anything the
+--   business asks about returns.
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE dim_customer_scd (
+    customer_key INTEGER PRIMARY KEY,   -- surrogate key FOR THIS VERSION
+    customer_id  INTEGER NOT NULL,      -- natural key, constant across versions
+    full_name    TEXT    NOT NULL,
+    email        TEXT    NOT NULL,
+    city         TEXT,
+    country      TEXT,
+    valid_from   TEXT    NOT NULL,      -- version became effective this date
+    valid_to     TEXT,                  -- NULL while the version is current
+    is_current   INTEGER NOT NULL CHECK (is_current IN (0, 1))
+);
+
+CREATE TABLE fact_returns (
+    return_key    INTEGER PRIMARY KEY,
+    order_id      INTEGER NOT NULL,
+    line_no       INTEGER NOT NULL,
+    -- the RETURN date, not the order date — that's the grain
+    date_key      INTEGER NOT NULL REFERENCES dim_date(date_key),
+    customer_key  INTEGER NOT NULL REFERENCES dim_customer(customer_key),
+    product_key   INTEGER NOT NULL REFERENCES dim_product(product_key),
+    -- measures
+    quantity      INTEGER NOT NULL,     -- units returned
+    refund_amount REAL    NOT NULL      -- money refunded
 );

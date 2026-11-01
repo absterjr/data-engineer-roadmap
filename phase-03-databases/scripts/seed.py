@@ -6,27 +6,35 @@ The same generated dataset is written into:
 
   1. `legacy_orders` — one wide table with customer/product data duplicated
      into every line (the anti-pattern; see sql/01_legacy_flat.sql)
-  2. the 3NF tables — customers, addresses, categories, products, orders,
-     order_items (the fix; see sql/02_normalized_3nf.sql)
+  2. the 3NF tables — customers, addresses, address_changes, categories,
+     products, orders, order_items, returns (the fix; see sql/02_normalized_3nf.sql)
 
 Everything is deterministic (random.seed), so every run produces the same
 numbers — reports stay reproducible.
 
 HOW THE GENERATION WORKS:
   - customers: random names/emails, one default address each (10% get a
-    second address so the addresses table isn't decorative)
+    second address). 8% of customers MOVE once during 2024-2025 — the move
+    is recorded in address_changes (the CRM's change feed), and their
+    default address ends at the final city, so current-state and history
+    stay consistent.
   - products: 300 products in 12 categories, price ranges per category
   - orders: 25,000 over 2024-01-01 .. 2025-12-31, with SEASONALITY
     (November/December weighted ~1.6x), WEEKEND SUPPRESSION (35% of the
     normal rate — this is a B2B-leaning store), and a VIP customer subset
     (40% of orders come from 15% of customers, so Pareto analysis has signal)
   - order lines: 1-6 items per order, quantities 1-12, discounts 0-25%
+  - returns: 'returned' orders get 1..all lines returned PARTIALLY
+    (quantity_returned <= quantity), 3-14 days later, with a refund
+    computed from the line's net price. Partial returns are why a status
+    flag can't model this.
 """
 from __future__ import annotations
 
 import calendar
 import random
 import sqlite3
+from datetime import date, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -112,9 +120,14 @@ def pick_country() -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 
 
-def gen_customers(n: int = 1200) -> list[dict]:
-    """Customers + their addresses. 10% get a second (non-default) address."""
-    customers, addresses = [], []
+def gen_customers(n: int = 1200) -> tuple[list[dict], list[dict], list[dict]]:
+    """Customers + addresses + address CHANGES (8% move once).
+
+    The default address ends at the FINAL city (after any move), so the
+    current-state tables and the history always agree. The move itself is
+    recorded in the address_changes feed — one row per move.
+    """
+    customers, addresses, changes = [], [], []
     for cid in range(1, n + 1):
         first, last = rng.choice(FIRST), rng.choice(LAST)
         name = f"{first} {last}"
@@ -126,13 +139,39 @@ def gen_customers(n: int = 1200) -> list[dict]:
             "created_at": f"2023-{rng.randint(1, 12):02d}-{rng.randint(1, 28):02d}",
         })
         country, city = pick_country()
+        initial_city, initial_country = city, country
+
+        # 8% of customers move once, somewhere in 2024-2025.
+        if rng.random() < 0.08:
+            changed_on = f"202{rng.choice([4, 5])}-{rng.randint(1, 12):02d}-{rng.randint(1, 28):02d}"
+            if rng.random() < 0.70:
+                # same country, different city (the common case)
+                new_city = rng.choice([c for c in COUNTRIES[country][1] if c != city])
+                new_country = country
+            else:
+                # emigrated: everything changes — and must ACTUALLY change
+                # (pick_country can roll the same place; retry until not)
+                while True:
+                    new_country, new_city = pick_country()
+                    if (new_country, new_city) != (country, city):
+                        break
+            changes.append({
+                "customer_id": cid,
+                "old_city": initial_city,
+                "old_country": initial_country,
+                "new_city": new_city,
+                "new_country": new_country,
+                "changed_on": changed_on,
+            })
+            city, country = new_city, new_country  # current = final
+
         addresses.append({"customer_id": cid, "city": city, "country": country,
                           "is_default": 1})
         if rng.random() < 0.10:
             country2, city2 = pick_country()
             addresses.append({"customer_id": cid, "city": city2, "country": country2,
                               "is_default": 0})
-    return customers, addresses
+    return customers, addresses, changes
 
 
 def gen_products() -> tuple[list[dict], list[dict]]:
@@ -154,11 +193,18 @@ def gen_products() -> tuple[list[dict], list[dict]]:
 
 
 def gen_orders(customers: list[dict], products: list[dict], n_orders: int = 25000):
-    """Orders + lines with seasonality, weekend suppression, VIP skew."""
+    """Orders + lines with seasonality, weekend suppression, VIP skew.
+
+    Returns (orders, items, returns). Returns are generated AFTER the
+    lines exist: a 'returned' order returns a RANDOM SUBSET of its lines,
+    each partially, 3-14 days later — the reason a single status flag
+    cannot model returns.
+    """
     vip = set(rng.sample([c["id"] for c in customers],
                          max(1, int(len(customers) * 0.15))))
 
     orders, items = [], []
+    items_by_order: dict[int, list[dict]] = {}
     # weighted (year, month) pairs: November/December carry the holiday peak
     month_choices = [((y, m), MONTH_WEIGHT[m]) for y in range(2024, 2024 + YEAR)
                      for m in MONTHS]
@@ -192,17 +238,41 @@ def gen_orders(customers: list[dict], products: list[dict], n_orders: int = 2500
         })
 
         # --- 1-6 lines, each a random product -------------------------------
+        lines = []
         for line_no in range(1, weighted(ITEMS_PER_ORDER) + 1):
             product = rng.choice(products)
-            items.append({
+            line = {
                 "order_id": oid,
                 "line_no": line_no,
                 "product_id": product["id"],
                 "quantity": rng.randint(1, 12),
                 "unit_price": round(product["list_price"] * rng.uniform(0.90, 1.10), 2),
                 "discount_pct": weighted(DISCOUNTS),
+            }
+            items.append(line)
+            lines.append(line)
+        items_by_order[oid] = lines
+
+    # --- returns: only for 'returned' orders, a subset of their lines -------
+    returns = []
+    for o in orders:
+        if o["status"] != "returned":
+            continue
+        n_return_lines = rng.randint(1, len(items_by_order[o["id"]]))
+        for line in rng.sample(items_by_order[o["id"]], n_return_lines):
+            qty = rng.randint(1, line["quantity"])  # PARTIAL return possible
+            refund = round(line["unit_price"] * qty * (1 - line["discount_pct"]), 2)
+            y, m, d = (int(x) for x in o["order_date"].split("-"))
+            rd = date(y, m, d) + timedelta(days=rng.randint(3, 14))
+            rd = min(rd, date(2025, 12, 31))  # cap at dataset end
+            returns.append({
+                "order_id": o["id"],
+                "line_no": line["line_no"],
+                "return_date": rd.isoformat(),
+                "quantity": qty,
+                "refund_amount": refund,
             })
-    return orders, items
+    return orders, items, returns
 
 
 # ---------------------------------------------------------------------------
@@ -216,9 +286,9 @@ def build(db_path: Path = DB) -> dict:
     if db_path.exists():
         db_path.unlink()
 
-    customers, addresses = gen_customers()
+    customers, addresses, changes = gen_customers()
     categories, products = gen_products()
-    orders, items = gen_orders(customers, products)
+    orders, items, returns = gen_orders(customers, products)
 
     con = sqlite3.connect(db_path)
     con.execute("PRAGMA foreign_keys = ON")
@@ -254,6 +324,18 @@ def build(db_path: Path = DB) -> dict:
         [(i["order_id"], i["line_no"], i["product_id"], i["quantity"],
           i["unit_price"], i["discount_pct"]) for i in items],
     )
+    con.executemany(
+        "INSERT INTO address_changes (customer_id, old_city, old_country, new_city, new_country, changed_on) "
+        "VALUES (?,?,?,?,?,?)",
+        [(c["customer_id"], c["old_city"], c["old_country"], c["new_city"],
+          c["new_country"], c["changed_on"]) for c in changes],
+    )
+    con.executemany(
+        "INSERT INTO returns (order_id, line_no, return_date, quantity, refund_amount) "
+        "VALUES (?,?,?,?,?)",
+        [(r["order_id"], r["line_no"], r["return_date"], r["quantity"],
+          r["refund_amount"]) for r in returns],
+    )
 
     # --- legacy load: the SAME facts, duplicated into one wide table -------
     # This is the anti-pattern in action: look up the customer and product
@@ -288,9 +370,11 @@ def build(db_path: Path = DB) -> dict:
     counts = {
         "customers": con.execute("SELECT COUNT(*) FROM customers").fetchone()[0],
         "addresses": con.execute("SELECT COUNT(*) FROM addresses").fetchone()[0],
+        "moves": con.execute("SELECT COUNT(*) FROM address_changes").fetchone()[0],
         "products": con.execute("SELECT COUNT(*) FROM products").fetchone()[0],
         "orders": con.execute("SELECT COUNT(*) FROM orders").fetchone()[0],
         "order_items": con.execute("SELECT COUNT(*) FROM order_items").fetchone()[0],
+        "returns": con.execute("SELECT COUNT(*) FROM returns").fetchone()[0],
         "legacy_rows": con.execute("SELECT COUNT(*) FROM legacy_orders").fetchone()[0],
     }
     con.close()

@@ -113,3 +113,83 @@ FROM order_items oi
 JOIN orders o       ON o.order_id = oi.order_id
 JOIN dim_customer dc ON dc.customer_id = o.customer_id
 JOIN dim_product dp  ON dp.product_id = oi.product_id;
+
+-- ----------------------------------------------------------------------------
+-- 5. dim_customer_scd — TYPE 2 slowly changing dimension.
+--
+-- A customer's address history is a list of EVENTS:
+--   (a) their address at SIGNUP — for movers this lives in their FIRST
+--       change record's old_* values (the change feed records before AND
+--       after; without the before, the first version is unrecoverable),
+--       and for non-movers in the addresses table itself
+--   (b) every move, from address_changes
+-- The CTE stack turns that event list into VERSIONS: each version's
+-- valid_from is its own event date and valid_to is the day BEFORE the
+-- next version begins. LEAD() peeks at the next row in the same partition
+-- — the same window-function idea Phase 1 built by hand in the engine.
+-- ----------------------------------------------------------------------------
+INSERT INTO dim_customer_scd (
+    customer_id, full_name, email, city, country, valid_from, valid_to, is_current
+)
+WITH signup AS (
+    -- movers: the initial address is their earliest change's old values
+    SELECT ac.customer_id, ac.old_city AS city, ac.old_country AS country,
+           c.created_at AS event_date
+    FROM address_changes ac
+    JOIN (SELECT customer_id, MIN(changed_on) AS first_change
+          FROM address_changes GROUP BY customer_id) f
+          ON f.customer_id = ac.customer_id AND f.first_change = ac.changed_on
+    JOIN customers c ON c.customer_id = ac.customer_id
+    UNION ALL
+    -- non-movers: the addresses table IS their signup address
+    SELECT c.customer_id, a.city, a.country, c.created_at
+    FROM customers c
+    JOIN addresses a ON a.customer_id = c.customer_id AND a.is_default = 1
+    WHERE c.customer_id NOT IN (SELECT customer_id FROM address_changes)
+),
+moves AS (
+    SELECT customer_id, new_city AS city, new_country AS country,
+           changed_on AS event_date
+    FROM address_changes
+),
+events AS (
+    SELECT * FROM signup
+    UNION ALL
+    SELECT * FROM moves
+),
+versions AS (
+    SELECT customer_id, city, country, event_date,
+           LEAD(event_date) OVER (PARTITION BY customer_id ORDER BY event_date) AS next_date
+    FROM events
+)
+SELECT
+    v.customer_id,
+    c.full_name,
+    c.email,
+    v.city,
+    v.country,
+    v.event_date,
+    DATE(v.next_date, '-1 day'),                    -- last day this version was true
+    CASE WHEN v.next_date IS NULL THEN 1 ELSE 0 END -- NULL next_date = latest = current
+FROM versions v
+JOIN customers c ON c.customer_id = v.customer_id;
+
+-- ----------------------------------------------------------------------------
+-- 6. fact_returns — one row per returned line, dated by the RETURN.
+-- ----------------------------------------------------------------------------
+INSERT INTO fact_returns (
+    order_id, line_no, date_key, customer_key, product_key, quantity, refund_amount
+)
+SELECT
+    r.order_id,
+    r.line_no,
+    CAST(strftime('%Y%m%d', r.return_date) AS INTEGER),
+    dc.customer_key,
+    dp.product_key,
+    r.quantity,
+    r.refund_amount
+FROM returns r
+JOIN orders o       ON o.order_id = r.order_id
+JOIN order_items oi ON oi.order_id = r.order_id AND oi.line_no = r.line_no
+JOIN dim_customer dc ON dc.customer_id = o.customer_id
+JOIN dim_product dp  ON dp.product_id = oi.product_id;

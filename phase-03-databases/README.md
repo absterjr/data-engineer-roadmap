@@ -24,17 +24,24 @@ sql/02_normalized_3nf.sql  customers, products, orders, ...  — the fix
 sql/03_star_schema.sql     fact_sales + dim_* — the warehouse
 sql/04_etl_3nf_to_star.sql the ETL: 3NF -> star (recursive CTE for dim_date)
 sql/05_analytical_queries.sql   six business questions against the star
+sql/06_scd_and_returns_queries.sql  SCD point-in-time + returns-at-grain queries
 ```
 
 Run order:
 
 ```bash
 python scripts/seed.py             # generates data, loads legacy + 3NF
-python scripts/build_warehouse.py  # star DDL + ETL + indexes
+python scripts/build_warehouse.py  # star DDL + ETL + indexes + reconciliation
 python scripts/run_sql.py sql/05_analytical_queries.sql
+python scripts/run_sql.py sql/06_scd_and_returns_queries.sql
 python scripts/anomalies.py        # watch the legacy schema rot in real time
 python scripts/compare.py          # same question, three schemas: joins + timings
 ```
+
+The stretch goals are shipped too — the two caveats documented in the first version of the model are closed:
+
+- **`dim_customer_scd` (Type 2 slowly changing dimension):** 81 movers tracked as versions (`valid_from`/`valid_to`/`is_current`). Point-in-time queries answer "where did this customer live when their 2024 orders happened?" — and the money demo shows the current-state dimension misattributes up to £39,651 of a city's annual revenue.
+- **`fact_returns` (returns at their own grain):** 912 returned lines dated by return date. Proves 73% of returns are partial — unrepresentable as a status flag. See [docs/MODELING.md §9](docs/MODELING.md).
 
 ## The rebuild task
 

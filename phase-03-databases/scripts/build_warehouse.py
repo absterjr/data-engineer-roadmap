@@ -27,6 +27,10 @@ FACT_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_fact_date     ON fact_sales(date_key)",
     "CREATE INDEX IF NOT EXISTS idx_fact_customer ON fact_sales(customer_key)",
     "CREATE INDEX IF NOT EXISTS idx_fact_product  ON fact_sales(product_key)",
+    "CREATE INDEX IF NOT EXISTS idx_ret_date     ON fact_returns(date_key)",
+    "CREATE INDEX IF NOT EXISTS idx_ret_customer ON fact_returns(customer_key)",
+    "CREATE INDEX IF NOT EXISTS idx_ret_product  ON fact_returns(product_key)",
+    "CREATE INDEX IF NOT EXISTS idx_scd_customer ON dim_customer_scd(customer_id)",
 ]
 
 
@@ -76,17 +80,44 @@ def main() -> None:
     counts = {
         "dim_date": con.execute("SELECT COUNT(*) FROM dim_date").fetchone()[0],
         "dim_customer": con.execute("SELECT COUNT(*) FROM dim_customer").fetchone()[0],
+        "dim_customer_scd": con.execute("SELECT COUNT(*) FROM dim_customer_scd").fetchone()[0],
         "dim_product": con.execute("SELECT COUNT(*) FROM dim_product").fetchone()[0],
         "fact_sales": con.execute("SELECT COUNT(*) FROM fact_sales").fetchone()[0],
+        "fact_returns": con.execute("SELECT COUNT(*) FROM fact_returns").fetchone()[0],
     }
 
     print("\nwarehouse contents")
     for k, v in counts.items():
-        print(f"  {k:<14} {v:>8,}")
+        print(f"  {k:<18} {v:>8,}")
     print(f"\nreconciliation")
     print(f"  star net revenue   : {star_rev:,.2f}")
     print(f"  3NF source revenue : {source_rev:,.2f}")
     print(f"  match              : {'YES' if star_rev == source_rev else 'NO  <-- ETL BUG'}")
+
+    # --- 6: reconcile the two new tables -----------------------------------
+    # fact_returns: refunds in the warehouse must equal the 3NF returns table.
+    star_refunds = con.execute(
+        "SELECT ROUND(SUM(refund_amount), 2) FROM fact_returns"
+    ).fetchone()[0]
+    source_refunds = con.execute(
+        "SELECT ROUND(SUM(refund_amount), 2) FROM returns"
+    ).fetchone()[0]
+    print(f"  star refunds       : {star_refunds:,.2f}")
+    print(f"  3NF source refunds : {source_refunds:,.2f}")
+    print(f"  refund match       : {'YES' if star_refunds == source_refunds else 'NO  <-- ETL BUG'}")
+
+    # dim_customer_scd: every customer must have exactly ONE current version,
+    # and total versions = customers + moves.
+    n_current = con.execute(
+        "SELECT COUNT(*) FROM dim_customer_scd WHERE is_current = 1"
+    ).fetchone()[0]
+    n_versions = con.execute("SELECT COUNT(*) FROM dim_customer_scd").fetchone()[0]
+    n_customers = con.execute("SELECT COUNT(*) FROM customers").fetchone()[0]
+    n_moves = con.execute("SELECT COUNT(*) FROM address_changes").fetchone()[0]
+    print(f"  SCD current rows   : {n_current} (customers: {n_customers}) -> "
+          f"{'YES' if n_current == n_customers else 'NO  <-- ETL BUG'}")
+    print(f"  SCD total versions : {n_versions} (customers + moves: {n_customers + n_moves}) -> "
+          f"{'YES' if n_versions == n_customers + n_moves else 'NO  <-- ETL BUG'}")
 
     con.close()
 

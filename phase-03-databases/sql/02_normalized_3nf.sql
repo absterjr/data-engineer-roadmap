@@ -71,8 +71,40 @@ CREATE TABLE order_items (
     PRIMARY KEY (order_id, line_no)
 );
 
+-- The CRM's address-change feed: one row per time a customer moved.
+-- THIS is the slowly-changing-dimension source. The addresses table holds
+-- current state; this table holds the history — and it must record the
+-- BEFORE state too, otherwise the warehouse can't reconstruct where the
+-- customer lived at signup. (A feed with only new values destroys the
+-- first version: a lesson in what a change log must capture.)
+CREATE TABLE address_changes (
+    change_id   INTEGER PRIMARY KEY,
+    customer_id INTEGER NOT NULL REFERENCES customers(customer_id),
+    old_city    TEXT    NOT NULL,
+    old_country TEXT    NOT NULL,
+    new_city    TEXT    NOT NULL,
+    new_country TEXT    NOT NULL,
+    changed_on  TEXT    NOT NULL
+);
+
+-- Returns at their OWN grain — a real business event, not a status flag.
+-- One row per returned line: when it came back, how many units, and how
+-- much money was refunded. (A 'returned' order can have PARTIAL returns:
+-- line 1 came back, line 2 didn't — impossible to express as a status.)
+CREATE TABLE returns (
+    return_id     INTEGER PRIMARY KEY,
+    order_id      INTEGER NOT NULL,
+    line_no       INTEGER NOT NULL,
+    return_date   TEXT    NOT NULL,
+    quantity      INTEGER NOT NULL CHECK (quantity > 0),
+    refund_amount REAL    NOT NULL CHECK (refund_amount >= 0),
+    FOREIGN KEY (order_id, line_no) REFERENCES order_items(order_id, line_no)
+);
+
 -- Index the foreign keys: every JOIN in this phase starts from them.
 CREATE INDEX idx_orders_customer     ON orders(customer_id);
 CREATE INDEX idx_orders_date         ON orders(order_date);
 CREATE INDEX idx_items_product       ON order_items(product_id);
 CREATE INDEX idx_addresses_customer  ON addresses(customer_id);
+CREATE INDEX idx_changes_customer    ON address_changes(customer_id);
+CREATE INDEX idx_returns_order       ON returns(order_id);
